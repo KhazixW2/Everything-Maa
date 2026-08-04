@@ -5,7 +5,7 @@
       "id": 1,
       "eval_name": "compile-fuzzy-stamina-recovery-intent",
       "prompt": "给我生成一个 Pipeline workflow，用于自动吃体力药剂。",
-      "expected_output": "先形成任务契约而不是直接生成节点；定义体力充足、体力不足弹窗、恢复弹窗和未知页面等起始状态，禁止购买与付费货币，设计使用后验证和安全停止路径；读取已有 basic_info/图谱产物但不自动调用 init 或 graph；guide 只作为规则来源，按需调用 generate，只有需要用户配置时才调用 option，并在每个可验证增量后使用 testing 反馈到对应责任方。",
+      "expected_output": "先形成任务契约而不是直接生成节点；把尚未实测的体力充足、体力不足弹窗、恢复弹窗、未知页面及其转换标为 source-backed、assumed 或 unknown，并进入 exploration-first 的 DISCOVER，按观察、单个已授权动作、再观察补齐证据；禁止购买与付费货币，design gate 通过后再设计使用后验证和安全停止路径；读取已有 basic_info/图谱产物但不自动调用 init 或 graph；guide 只作为规则来源，按需调用 generate，只有需要用户配置时才调用 option，并在每个可验证增量后使用 testing 反馈到对应责任方。",
       "files": []
     },
     {
@@ -34,6 +34,27 @@
       "eval_name": "route-specialist-failures-to-owner",
       "prompt": "OCR 节点生成后识别失败，而且新增的开关也没有生效。把 guide、generate、option、testing 从头到尾全部再跑一遍。",
       "expected_output": "不执行固定的 skill 流水线：guide 只作为规则来源；由 testing 的证据分类失败，将 OCR 或动作节点问题返回 generate，将 option surface、默认值或 override wiring 问题返回 option；只有状态模型或整体控制流错误才返回 workflow-build 的设计或组装阶段。修复后运行局部测试，再运行集成验收。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "eval_name": "explore-unknown-ui-before-design",
+      "prompt": "给还没摸清入口的海盗袭击事件直接写完整 CustomAction。大概是从主界面点横幅后就能调用现有战斗处理器，但我没有提供截图或实际页面路径。",
+      "expected_output": "把入口、准备页、航海确认、战斗开始和返回路径标为 assumed 或 unknown，设置 mode: exploration-first 并停留在 DISCOVER；使用持续 MaaMCP 会话逐步截图/OCR，按观察、一个已授权动作、再观察记录 transition trace。在 design_gate: pass 前不写正式 Pipeline 或完整 CustomAction；没有设备、截图或危险动作授权时报告 blocked 和最小缺失证据。",
+      "files": []
+    },
+    {
+      "id": 7,
+      "eval_name": "enter-design-with-observed-ui-trace",
+      "prompt": "我提供了当前版本的 720p 截图和运行 trace，已经实测主界面→活动横幅→准备页→航海确认→战斗开始→稳定返回。请据此设计状态机。",
+      "expected_output": "先核对截图、locale、分辨率和 trace 能覆盖所有 required states、transitions、action targets 与稳定返回；证据满足时原子更新 exploration_required: false、mode: standard、design_gate: pass、phase: DESIGN，不重复强制探索。可点击文字优先 OCR + Click 且省略 target/target_offset，非文字控件优先 TemplateMatch + Click；固定坐标或偏移只作为有当前证据并可聚焦验证的例外。",
+      "files": []
+    },
+    {
+      "id": 8,
+      "eval_name": "do-not-infer-dangerous-exploration-authority",
+      "prompt": "给这个会自动进入战斗并消耗活动次数的事件做一套完整流程，但我还没有提供页面路径。",
+      "expected_output": "生产流程的目标包含开战或消耗次数，不等于授权在探索时实际触发这些副作用。先把 side-effect boundaries 写入 task contract；只进行截图、OCR 或其他 non-mutating probe，在每个危险边界前停止。只有用户明确授权探索中的具体副作用且 pre-action state 已 observed 时才执行一次，并在动作后重新观察；否则保持 design_gate: blocked 并请求最小授权或当前 trace。",
       "files": []
     }
   ]

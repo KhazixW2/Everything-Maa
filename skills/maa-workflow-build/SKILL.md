@@ -14,6 +14,7 @@ Own an end-to-end Maa automation request from ambiguous intent through evidence-
 - Separate observed facts, user decisions, working assumptions, and unresolved questions.
 - Ask only about choices that materially change behavior, safety, or acceptance. Make reversible, low-risk assumptions explicit and continue.
 - Define verification before implementation. Do not declare completion because files were written or a single smoke test passed.
+- Treat guessed UI states, transitions, and action targets as unresolved evidence, not as a design input.
 
 Read [references/task-contract.md](references/task-contract.md) before finalizing the goal. Read [references/run-state.md](references/run-state.md) before the first action and at every phase transition.
 
@@ -36,6 +37,8 @@ Compile the request into a task contract. Define the goal, non-goals, observable
 
 Treat start state as a set of observable states, not one ideal screen. Include safe behavior for an unknown or unexpected state. Resolve project-independent product choices before editing, such as whether paid currency, purchases, repeated consumptions, or destructive actions are allowed.
 
+Classify evidence for every required UI start state, success state, transition, and action target as `observed`, `source-backed`, `assumed`, or `unknown`. If any required runtime UI fact is not `observed`, set the run state to `mode: exploration-first`; do not turn source inference or an assumption into a precise-looking OCR string, ROI, template, coordinate, or implementation plan.
+
 ### 2. DISCOVER
 
 Locate the target project and check for optional project-level context artifacts before broad discovery:
@@ -46,7 +49,11 @@ Locate the target project and check for optional project-level context artifacts
 
 Never invoke `$maa-project-init` or `$maa-pipeline-graph` automatically. Use those one-time or low-frequency project tools only when the user explicitly requests initialization, refresh, visualization, or graph regeneration. Confirm current Pipeline files, task entries, resource groups, public return/recovery nodes, option surfaces, Python entries, device availability, and current UI evidence directly from the project and environment.
 
+When the run state is `mode: exploration-first`, read [references/exploration-protocol.md](references/exploration-protocol.md) and remain in `DISCOVER`. Use a persistent MaaMCP session for iterative visual exploration, or `$maa-cli-operate` for bounded repeatable observations. Observe the stable screen, perform at most one minimal authorized action, then re-observe and record the transition. Do not write deliverable Pipeline nodes or a full CustomAction while required UI transitions remain unobserved.
+
 ### 3. DESIGN
+
+Enter `DESIGN` only when the design gate is `pass`, or `not-required` because the task contract contains no runtime UI path to discover. A current source file can orient discovery, but source-backed evidence alone does not make the gate unnecessary or prove an unfamiliar runtime UI path. When an exploration gate passes, atomically set `exploration_required: false`, change the run-state mode to `standard`, preserve `design_gate: pass`, and move the phase to `DESIGN`. If the gate is `blocked`, report the smallest missing screenshot, recognition trace, device access, or authorization instead of completing the path from inference.
 
 Design the complete state machine before generating nodes. Include:
 
@@ -72,6 +79,8 @@ Apply the smallest coherent change that can satisfy the task contract:
 - use `$maa-pipeline-testing` after each coherent increment for recognition, Custom wiring, and behavioral validation, then run the integrated verification ladder.
 
 Keep temporary probes distinguishable from deliverable nodes. Preserve the target project's existing schema and naming conventions. Update the run state after each meaningful observation, edit, or failed attempt.
+
+Prefer recognition-relative actions proven during discovery: use OCR plus `Click` without an explicit `target` or `target_offset` for a clickable text control, and TemplateMatch plus `Click` for a stable non-text control. Treat `DirectHit` with a fixed target, an explicit coordinate target, or an offset from a different recognition as an exception that requires current visual evidence, a stable coordinate basis, and focused runtime verification.
 
 ### 5. VERIFY
 

@@ -14,6 +14,8 @@
 
 项目级 `basic_info.md` 与已有 Pipeline 图谱只作为可选上下文产物读取。本 skill 不自动调用 `maa-project-init` 或 `maa-pipeline-graph`；初始化、刷新和图谱生成由用户显式发起。
 
+当关键 UI 状态、转换或动作目标仍是猜测时，本 skill 会进入 `exploration-first`：停留在 `DISCOVER`，按“观察 → 一个已授权动作 → 再观察”逐步建立可追溯的状态转换。只有设计门禁通过后才会设计完整状态机或编写正式 Pipeline/CustomAction；没有设备、当前截图或动作授权时会明确保留阻塞，而不是补全猜测。
+
 ## 专业 Skill 的职责
 
 - `maa-pipeline-guide` 是规则与说明书；guide 不是执行阶段，也不负责生产节点。
@@ -29,7 +31,10 @@ flowchart TD
     U[用户模糊需求] --> W[maa-workflow-build]
     W --> C[任务契约]
     C --> D[发现项目与页面状态]
-    D --> M[设计完整状态机]
+    D --> G{关键 UI 证据已观察?}
+    G -->|否| E[exploration-first<br/>观察→单个安全动作→再观察]
+    E --> G
+    G -->|是| M[设计完整状态机]
 
     GUIDE[(maa-pipeline-guide<br/>规则与说明书)]
     GUIDE -.约束.-> M
@@ -52,3 +57,5 @@ flowchart TD
 ```
 
 测试不是一次性的末尾动作。局部识别测试通过后还要验证结构、选项接线、失败与恢复路径，最后才执行获得授权的端到端验收。
+
+动作目标遵循证据优先：可点击文字优先使用 OCR 识别框直接点击，稳定的非文字控件优先 TemplateMatch。固定坐标、`DirectHit` 或从其他识别结果偏移点击不是绝对禁用，但必须有当前画面、坐标基准和运行验证支撑。

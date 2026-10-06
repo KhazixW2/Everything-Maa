@@ -136,24 +136,80 @@ def test_sweep_cli_rejects_missing_dimensions_before_writing_files(
     assert not (tmp_path / "generate_sweep").exists()
 
 
-def test_build_node_config_omits_wait_defaults():
+@pytest.mark.parametrize(
+    ("pipeline", "expected_format"),
+    [
+        ({}, "v2"),
+        ({"Old": {"recognition": "OCR", "action": "Click"}}, "v1"),
+        (
+            {"New": {"recognition": {"type": "OCR"}, "action": {"type": "Click"}}},
+            "v2",
+        ),
+    ],
+)
+def test_detect_pipeline_format_follows_target_file(
+    pipeline: dict, expected_format: str
+):
     module = load_module("test_generate_node_defaults", SCRIPT_DIR / "generate_node.py")
 
-    assert module.build_node_config("角色", [1, 2, 3, 4], "Click", None, None) == {
-        "recognition": "OCR",
-        "expected": ["角色"],
-        "roi": [1, 2, 3, 4],
-        "action": "Click",
+    assert module.detect_pipeline_format(pipeline) == expected_format
+
+
+def test_detect_pipeline_format_requires_explicit_choice_for_mixed_file():
+    module = load_module("test_generate_node_mixed", SCRIPT_DIR / "generate_node.py")
+    pipeline = {
+        "Old": {"recognition": "OCR", "action": "Click"},
+        "New": {"recognition": {"type": "OCR"}, "action": {"type": "Click"}},
     }
 
-    assert module.build_node_config("角色", [1, 2, 3, 4], "DoNothing", 500, 2000) == {
-        "recognition": "OCR",
-        "expected": ["角色"],
-        "roi": [1, 2, 3, 4],
-        "action": "DoNothing",
-        "post_delay": 500,
-        "timeout": 2000,
-    }
+    with pytest.raises(RuntimeError, match="显式指定 --format"):
+        module.detect_pipeline_format(pipeline)
+
+    assert module.detect_pipeline_format(pipeline, "v1") == "v1"
+    assert module.detect_pipeline_format(pipeline, "v2") == "v2"
+
+
+@pytest.mark.parametrize("node_format", ["v1", "v2"])
+def test_build_node_config_matches_format_and_omits_wait_defaults(
+    node_format: str,
+):
+    module = load_module(f"test_generate_node_{node_format}", SCRIPT_DIR / "generate_node.py")
+
+    assert module.build_node_config(
+        node_format, "角色", [1, 2, 3, 4], "Click", None, None
+    ) == (
+        {
+            "recognition": "OCR",
+            "expected": ["角色"],
+            "roi": [1, 2, 3, 4],
+            "action": "Click",
+        }
+        if node_format == "v1"
+        else {
+            "recognition": {"type": "OCR", "param": {"expected": ["角色"], "roi": [1, 2, 3, 4]}},
+            "action": {"type": "Click"},
+        }
+    )
+
+    assert module.build_node_config(
+        node_format, "角色", [1, 2, 3, 4], "DoNothing", 500, 2000
+    ) == (
+        {
+            "recognition": "OCR",
+            "expected": ["角色"],
+            "roi": [1, 2, 3, 4],
+            "action": "DoNothing",
+            "post_delay": 500,
+            "timeout": 2000,
+        }
+        if node_format == "v1"
+        else {
+            "recognition": {"type": "OCR", "param": {"expected": ["角色"], "roi": [1, 2, 3, 4]}},
+            "action": {"type": "DoNothing"},
+            "post_delay": 500,
+            "timeout": 2000,
+        }
+    )
 
 
 def test_sweep_probe_keeps_fast_failure_timeout(tmp_path: Path):

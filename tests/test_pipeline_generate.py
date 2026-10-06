@@ -136,6 +136,37 @@ def test_sweep_cli_rejects_missing_dimensions_before_writing_files(
     assert not (tmp_path / "generate_sweep").exists()
 
 
+def test_build_node_config_omits_wait_defaults():
+    module = load_module("test_generate_node_defaults", SCRIPT_DIR / "generate_node.py")
+
+    assert module.build_node_config("角色", [1, 2, 3, 4], "Click", None, None) == {
+        "recognition": "OCR",
+        "expected": ["角色"],
+        "roi": [1, 2, 3, 4],
+        "action": "Click",
+    }
+
+    assert module.build_node_config("角色", [1, 2, 3, 4], "DoNothing", 500, 2000) == {
+        "recognition": "OCR",
+        "expected": ["角色"],
+        "roi": [1, 2, 3, 4],
+        "action": "DoNothing",
+        "post_delay": 500,
+        "timeout": 2000,
+    }
+
+
+def test_sweep_probe_keeps_fast_failure_timeout(tmp_path: Path):
+    module = load_module("test_generate_sweep_timeout", SCRIPT_DIR / "generate_sweep.py")
+
+    nodes = module.make_sweep_pipeline(
+        "角色", (10, 20, 30, 40), [0], str(tmp_path / "unused.json"), 720, 1280
+    )
+
+    assert "post_delay" not in nodes["Sweep_角色_e0"]
+    assert nodes["Sweep_角色_e0"]["timeout"] == 2000
+
+
 def test_find_project_root_accepts_jsonc_and_assets_layout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

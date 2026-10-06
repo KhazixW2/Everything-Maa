@@ -84,6 +84,26 @@ def controller_screen_size(controller_id) -> tuple[int, int]:
     return size
 
 
+def build_node_config(
+    target_text: str,
+    roi: list[int],
+    action: str,
+    post_delay: int | None,
+    timeout: int | None,
+) -> dict:
+    config = {
+        "recognition": "OCR",
+        "expected": [target_text],
+        "roi": roi,
+        "action": action,
+    }
+    if post_delay is not None:
+        config["post_delay"] = post_delay
+    if timeout is not None:
+        config["timeout"] = timeout
+    return config
+
+
 def _val(r, key):
     """兼容 OCRResult 对象 (r.text) 和 dict (r['text'])。"""
     return getattr(r, key, None) if hasattr(r, key) else r[key]
@@ -190,8 +210,18 @@ def main():
         choices=["Click", "DoNothing", "LongPress", "Swipe", "ClickKey", "InputText"],
     )
     parser.add_argument("--expand", type=int, default=20, help="ROI 扩边像素（推荐 20-30，可先用 generate_sweep.py 测试）")
-    parser.add_argument("--post-delay", type=int, default=500)
-    parser.add_argument("--timeout", type=int, default=2000)
+    parser.add_argument(
+        "--post-delay",
+        type=int,
+        default=None,
+        help="节点完成后等待毫秒；省略时使用协议默认 200ms 且不写入字段",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help="识别超时毫秒；省略时使用协议默认 20000ms 且不写入字段",
+    )
     parser.add_argument(
         "--screen-width",
         type=int,
@@ -239,14 +269,13 @@ def main():
 
     # === Step 3: 合并 ===
     print(f"\n=== Step 3: 合并到 {path.name} ===")
-    node_config = {
-        "recognition": "OCR",
-        "expected": [args.target_text],
-        "roi": roi,
-        "action": args.action,
-        "post_delay": args.post_delay,
-        "timeout": args.timeout,
-    }
+    node_config = build_node_config(
+        args.target_text,
+        roi,
+        args.action,
+        args.post_delay,
+        args.timeout,
+    )
     result_path = merge_into_pipeline(str(path), args.node_name, node_config, args.overwrite)
     print(f"[OK] 已写入: {result_path}")
 

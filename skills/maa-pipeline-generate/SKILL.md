@@ -47,7 +47,7 @@ Pipeline 由 Node 组成。本 skill 针对**OCR 文本识别节点**，按 Pipe
 | `expand_offset` | ❌ | `20` | ROI 扩边像素（**推荐先用 sweep 找最佳**） |
 | `post_delay` | ❌ | `500` | |
 | `timeout` | ❌ | `2000` | |
-| `screen_width` / `screen_height` | ❌ | controller metadata | 显式参数或 `SCREEN_SIZE` 优先；否则从当前 controller 坐标尺寸推导短边 720 基准 |
+| `screen_width` / `screen_height` | ❌ | controller metadata | 显式参数或 `SCREEN_SIZE` 优先；否则只使用 screencap metadata 的 `coordinate_size`，并在 OCR 前后校验尺寸未变化 |
 | `overwrite` | ❌ | `False` | 节点名冲突时是否覆盖 |
 
 ## 3 步工作流（伪代码）
@@ -70,8 +70,9 @@ matched = [r for r in ocr_results if target_text in (r.text if hasattr(r, "text"
 best = max(matched, key=lambda r: r.score if hasattr(r, "score") else r["score"])
 box = best.box if hasattr(best, "box") else best["box"]
 
-# MaaMCP ADB controller 坐标默认短边为 720，但方向和长边由当前画面决定。
-# 显式传入尺寸时必须与 OCR box 的坐标系一致；否则用 controller metadata。
+# MaaMCP ADB controller 坐标短边通常为 720，但方向和长边由当前画面决定。
+# 显式传入尺寸时必须与 OCR box 的坐标系一致；否则只使用 screencap metadata 的
+# coordinate_size。image_size 可能已被分辨率处理改变，不能当作 controller 坐标。
 SCREEN_W, SCREEN_H = controller_screen_size(controller_id)
 x, y, w, h = box
 E = expand_offset
@@ -81,6 +82,8 @@ roi = [
     min(SCREEN_W - max(0, x - E), w + 2 * E),
     min(SCREEN_H - max(0, y - E), h + 2 * E),
 ]
+if controller_screen_size(controller_id) != (SCREEN_W, SCREEN_H):
+    raise RuntimeError("OCR 前后屏幕尺寸变化，必须重试以避免 box 和 ROI 使用不同坐标系")
 
 # === Step 3: 合并到目标 pipeline ===
 from maa_mcp.pipeline_tools import load_pipeline, save_pipeline

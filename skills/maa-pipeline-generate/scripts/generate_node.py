@@ -52,19 +52,18 @@ def screen_size_from_metadata(metadata: object) -> tuple[int, int] | None:
     """Read the controller coordinate size returned by MaaMCP screencap metadata."""
     if not isinstance(metadata, dict):
         return None
-    for key in ("coordinate_size", "image_size"):
-        size = metadata.get(key)
-        if (
-            isinstance(size, (list, tuple))
-            and len(size) == 2
-            and all(
-                isinstance(value, int)
-                and not isinstance(value, bool)
-                and value > 0
-                for value in size
-            )
-        ):
-            return int(size[0]), int(size[1])
+    size = metadata.get("coordinate_size")
+    if (
+        isinstance(size, (list, tuple))
+        and len(size) == 2
+        and all(
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+            for value in size
+        )
+    ):
+        return int(size[0]), int(size[1])
     return None
 
 
@@ -217,12 +216,23 @@ def main():
     print("\n=== Step 1: 连接设备 ===")
     ctrl = connect_device()
     print(f"已连接: {ctrl}")
-    screen_w, screen_h = explicit_size or controller_screen_size(ctrl)
+    derived_size = explicit_size is None
+    if explicit_size is not None:
+        screen_w, screen_h = explicit_size
+    else:
+        screen_w, screen_h = controller_screen_size(ctrl)
     print(f"基准分辨率: {screen_w}x{screen_h}")
 
     # === Step 2: OCR + 算 ROI ===
     print(f"\n=== Step 2: OCR 找 '{args.target_text}' ===")
     box, score = find_target_box(ctrl, args.target_text)
+    if derived_size:
+        latest_size = controller_screen_size(ctrl)
+        if latest_size != (screen_w, screen_h):
+            raise RuntimeError(
+                "OCR 前后 controller 坐标尺寸发生变化，OCR box 与基准尺寸可能来自不同屏幕；"
+                "请恢复目标画面后重试，或显式传入 --screen-width/--screen-height"
+            )
     roi = compute_roi(box, args.expand, screen_w, screen_h)
     print(f"匹配: box={box}, score={score:.3f}")
     print(f"扩大 ROI (expand={args.expand}): {roi}")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -58,6 +59,50 @@ def test_screen_size_prefers_explicit_dimensions_and_reads_controller_metadata()
         {"coordinate_size": (1280, 720), "image_size": (720, 1280)}
     ) == (1280, 720)
     assert module.screen_size_from_metadata({"coordinate_size": [720, 0]}) is None
+    assert module.screen_size_from_metadata({"image_size": [720, 1280]}) is None
+
+
+def test_controller_screen_size_reads_coordinate_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    module = load_module("test_generate_node_controller", SCRIPT_DIR / "generate_node.py")
+    calls = []
+
+    maa_mcp = types.ModuleType("maa_mcp")
+    vision = types.ModuleType("maa_mcp.vision")
+
+    def fake_screencap(controller_id, include_metadata=False):
+        calls.append((controller_id, include_metadata))
+        assert include_metadata is True
+        return {"coordinate_size": [1280, 720], "image_size": [1920, 1080]}
+
+    vision.screencap = fake_screencap
+    maa_mcp.vision = vision
+    monkeypatch.setitem(sys.modules, "maa_mcp", maa_mcp)
+    monkeypatch.setitem(sys.modules, "maa_mcp.vision", vision)
+
+    assert module.controller_screen_size("controller-1") == (1280, 720)
+    assert calls == [("controller-1", True)]
+
+
+def test_controller_screen_size_rejects_missing_coordinate_size(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    module = load_module(
+        "test_generate_node_metadata_error", SCRIPT_DIR / "generate_node.py"
+    )
+
+    maa_mcp = types.ModuleType("maa_mcp")
+    vision = types.ModuleType("maa_mcp.vision")
+    vision.screencap = lambda controller_id, include_metadata=False: {
+        "image_size": [720, 1280]
+    }
+    maa_mcp.vision = vision
+    monkeypatch.setitem(sys.modules, "maa_mcp", maa_mcp)
+    monkeypatch.setitem(sys.modules, "maa_mcp.vision", vision)
+
+    with pytest.raises(RuntimeError, match="无法从 controller metadata"):
+        module.controller_screen_size("controller-1")
 
 
 def test_sweep_screen_size_requires_explicit_or_environment_dimensions(
@@ -70,6 +115,25 @@ def test_sweep_screen_size_requires_explicit_or_environment_dimensions(
 
     assert module.get_screen_size(720, 1280) == (720, 1280)
     assert module.get_screen_size(None, None) is None
+
+
+def test_sweep_cli_rejects_missing_dimensions_before_writing_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    module = load_module(
+        "test_generate_sweep_cli_error", SCRIPT_DIR / "generate_sweep.py"
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["generate_sweep.py", "角色", "10,20,30,40"])
+    monkeypatch.delenv("SCREEN_SIZE", raising=False)
+    monkeypatch.delenv("SCREEN_WIDTH", raising=False)
+    monkeypatch.delenv("SCREEN_HEIGHT", raising=False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main()
+
+    assert exc_info.value.code == 2
+    assert not (tmp_path / "generate_sweep").exists()
 
 
 def test_find_project_root_accepts_jsonc_and_assets_layout(

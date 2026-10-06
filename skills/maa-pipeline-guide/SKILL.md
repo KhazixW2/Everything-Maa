@@ -450,7 +450,7 @@ Universal pipeline 使用 v2 格式，recognition 和 action 放入二级字典�
 - [ ] 无不必要的 `pre_delay` / `post_delay` / `timeout`
 - [ ] `next` 列表覆盖所有可能画面，含弹窗/加载/异常
 - [ ] 每次点击后有识别验证，不假设操作后状态
-- [ ] ROI / target 坐标基于 720×1280（宽×高）
+- [ ] ROI / target 坐标基于 720 短边动态基准（竖屏常为 720×1280，横屏常为 1280×720）
 - [ ] 点击目标来自识别结果，没有 `DirectHit` + 硬编码 `target`，也没有无锚点的硬编码 `target_offset`
 - [ ] JSON 格式化符合 `.prettierrc`
 - [ ] `locales/` 已添加新增任务的多语言文本

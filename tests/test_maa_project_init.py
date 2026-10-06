@@ -1233,6 +1233,58 @@ def test_anchor_resolution_removes_node_from_orphan_candidates(tmp_path: Path):
     assert "CookNodeA" not in pipeline["isolated_nodes"]
 
 
+def test_analyze_project_labels_cross_bundle_override_separately(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "OverrideProject"
+    write_json(
+        root / "interface.json",
+        {
+            "resource": [
+                {"name": "base", "path": ["./resource/base"]},
+                {"name": "channel", "path": ["./resource/channel"]},
+            ],
+            "task": [{"name": "Entry", "entry": "BaseOnly"}],
+        },
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "BaseOnly": {"recognition": "DirectHit"},
+            "SharedNode": {"recognition": "DirectHit", "next": ["BaseOnly"]},
+        },
+    )
+    write_json(
+        root / "resource" / "channel" / "pipeline" / "main.json",
+        {
+            "SharedNode": {"recognition": "OCR", "expected": ["Channel"]},
+        },
+    )
+
+    pipeline = analyzer.analyze_project(root)["pipeline"]
+
+    assert pipeline["duplicate_nodes"] == []
+    assert pipeline["cross_bundle_override_nodes"] == ["SharedNode"]
+
+
+def test_analyze_pipeline_files_flags_same_bundle_duplicate_only(tmp_path: Path):
+    analyzer = load_analyzer()
+    base = tmp_path / "resource" / "base"
+    first = base / "pipeline" / "main.json"
+    second = base / "pipeline" / "override.json"
+    write_json(first, {"SharedNode": {"recognition": "DirectHit"}})
+    write_json(second, {"SharedNode": {"recognition": "OCR", "expected": ["Base"]}})
+
+    pipeline = analyzer.analyze_pipeline_files(
+        tmp_path,
+        [first, second],
+        [base],
+        {str(base): "base"},
+    )
+
+    assert pipeline["duplicate_nodes"] == ["SharedNode"]
+    assert pipeline["cross_bundle_override_nodes"] == []
+
+
 # ---------------------------------------------------------------------------
 # Windows console encoding + async visitor typing (issue #8 minor extras)
 # ---------------------------------------------------------------------------

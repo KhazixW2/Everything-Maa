@@ -9,7 +9,7 @@
 5. switch case 使用 Yes/No
 6. input 注入与读取路径必须一致
 7. Pipeline 节点名使用 ASCII
-8. 不要跨文件重复定义节点
+8. 不要在同一 resource bundle 内重复定义节点
 9. 不要强行增加 Flag 节点
 10. 不要用 Python orchestration 替代状态机
 11. UI override 与 Python 读取必须一致
@@ -104,7 +104,7 @@ grep -rn "^\s*\"YourNodeName\":" <declared-resource-root>/pipeline/
 ```
 
 同一个 resource bundle 内两个文件定义同一个顶层节点，会直接让目标项目的 resource 语义检查失败；
-Python `json.load()` 检测不出来（Python 会静默覆盖），必须用项目锁定的加载器或等价语义检查检测。
+这和“一个 JSON 文档内的重复 key”不是同一层问题：`json.load()` 只会静默覆盖后者；跨文件同名节点必须用项目锁定的加载器或等价语义检查检测。
 
 ### 9. 不要为了"配置统一"硬塞 Flag 节点
 

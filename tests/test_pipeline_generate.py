@@ -50,6 +50,28 @@ def test_find_project_root_respects_explicit_environment(
     assert module.find_project_root() == explicit_root.resolve()
 
 
+def test_screen_size_prefers_explicit_dimensions_and_reads_controller_metadata():
+    module = load_module("test_generate_node_screen", SCRIPT_DIR / "generate_node.py")
+
+    assert module.get_screen_size(1280, 720) == (1280, 720)
+    assert module.screen_size_from_metadata(
+        {"coordinate_size": (1280, 720), "image_size": (720, 1280)}
+    ) == (1280, 720)
+    assert module.screen_size_from_metadata({"coordinate_size": [720, 0]}) is None
+
+
+def test_sweep_screen_size_requires_explicit_or_environment_dimensions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    module = load_module("test_generate_sweep_screen", SCRIPT_DIR / "generate_sweep.py")
+    monkeypatch.delenv("SCREEN_SIZE", raising=False)
+    monkeypatch.delenv("SCREEN_WIDTH", raising=False)
+    monkeypatch.delenv("SCREEN_HEIGHT", raising=False)
+
+    assert module.get_screen_size(720, 1280) == (720, 1280)
+    assert module.get_screen_size(None, None) is None
+
+
 def test_find_project_root_accepts_jsonc_and_assets_layout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

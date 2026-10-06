@@ -2,9 +2,9 @@
 maa-pipeline-generate ROI Sweep 测试工具。
 
 用法:
-    python generate_sweep.py <target_text> <box> [expands]
-    python generate_sweep.py "角色" "46,1248,50,30"
-    python generate_sweep.py "角色" "46,1248,50,30" 0,5,10,15,20,25,30,50,100
+    python generate_sweep.py <target_text> <box> [expands] --screen-width W --screen-height H
+    python generate_sweep.py "角色" "46,1248,50,30" --screen-width 720 --screen-height 1280
+    python generate_sweep.py "角色" "46,1248,50,30" 0,5,10,15,20,25,30,50,100 --screen-width 1280 --screen-height 720
 
 输出:
     在 generate_sweep/<text>_<expands>.json 生成测试 pipeline
@@ -12,6 +12,7 @@ maa-pipeline-generate ROI Sweep 测试工具。
     然后用 run_pipeline 逐个测试（手动）
 """
 
+import argparse
 import os
 import re
 import sys
@@ -20,10 +21,8 @@ from pathlib import Path
 
 from project_paths import find_project_root
 
-# 默认基准分辨率
-DEFAULT_SCREEN_W, DEFAULT_SCREEN_H = 720, 1280
-
-def get_screen_size(width: int | None, height: int | None) -> tuple[int, int]:
+def get_screen_size(width: int | None, height: int | None) -> tuple[int, int] | None:
+    """Return explicit CLI/environment dimensions without guessing a direction."""
     if width is not None or height is not None:
         if width is None or height is None:
             raise ValueError("必须同时提供 --screen-width 和 --screen-height")
@@ -40,7 +39,7 @@ def get_screen_size(width: int | None, height: int | None) -> tuple[int, int]:
     if env_w and env_h and env_w.isdigit() and env_h.isdigit():
         return int(env_w), int(env_h)
 
-    return DEFAULT_SCREEN_W, DEFAULT_SCREEN_H
+    return None
 
 
 def sanitize_filename(name: str) -> str:
@@ -101,14 +100,24 @@ def make_sweep_pipeline(
 
 
 def main():
-    if len(sys.argv) < 3:
-        print(__doc__)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="生成多个 ROI expand 变体用于实机识别测试")
+    parser.add_argument("target_text")
+    parser.add_argument("box")
+    parser.add_argument("expands", nargs="?", default="0,5,10,15,20,25,30,50,100")
+    parser.add_argument("--screen-width", type=int, default=None)
+    parser.add_argument("--screen-height", type=int, default=None)
+    args = parser.parse_args()
 
-    target_text = sys.argv[1]
-    box = parse_box(sys.argv[2])
-    expands = parse_expands(sys.argv[3]) if len(sys.argv) > 3 else [0, 5, 10, 15, 20, 25, 30, 50, 100]
-    screen_w, screen_h = get_screen_size(None, None)
+    target_text = args.target_text
+    box = parse_box(args.box)
+    expands = parse_expands(args.expands)
+    size = get_screen_size(args.screen_width, args.screen_height)
+    if size is None:
+        parser.error(
+            "必须用 --screen-width/--screen-height 或 SCREEN_SIZE 提供当前基准尺寸；"
+            "不要在横竖屏未知时假设 720x1280"
+        )
+    screen_w, screen_h = size
     PROJECT_ROOT = find_project_root()
 
     safe_target_text = sanitize_filename(target_text)

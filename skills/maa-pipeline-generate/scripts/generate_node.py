@@ -12,6 +12,7 @@ maa-pipeline-generate: 自动生成 OCR 文本节点并合并到指定 pipeline�
 """
 
 import argparse
+import os
 import json
 import sys
 from pathlib import Path
@@ -26,11 +27,8 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-# 默认基准分辨率
-DEFAULT_SCREEN_W, DEFAULT_SCREEN_H = 720, 1280
-
-
-def get_screen_size(width: int | None, height: int | None) -> tuple[int, int]:
+def get_screen_size(width: int | None, height: int | None) -> tuple[int, int] | None:
+    """Return explicit CLI/environment dimensions, or None for controller discovery."""
     if width is not None or height is not None:
         if width is None or height is None:
             raise ValueError("必须同时提供 --screen-width 和 --screen-height")
@@ -47,7 +45,43 @@ def get_screen_size(width: int | None, height: int | None) -> tuple[int, int]:
     if env_w and env_h and env_w.isdigit() and env_h.isdigit():
         return int(env_w), int(env_h)
 
-    return DEFAULT_SCREEN_W, DEFAULT_SCREEN_H
+    return None
+
+
+def screen_size_from_metadata(metadata: object) -> tuple[int, int] | None:
+    """Read the controller coordinate size returned by MaaMCP screencap metadata."""
+    if not isinstance(metadata, dict):
+        return None
+    size = metadata.get("coordinate_size")
+    if (
+        isinstance(size, (list, tuple))
+        and len(size) == 2
+        and all(
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+            for value in size
+        )
+    ):
+        return int(size[0]), int(size[1])
+    return None
+
+
+def controller_screen_size(controller_id) -> tuple[int, int]:
+    """Use the same controller coordinate space that produced the OCR box."""
+    from maa_mcp.vision import screencap
+
+    try:
+        metadata = screencap(controller_id, include_metadata=True)
+    except Exception as exc:
+        raise RuntimeError(f"读取 controller 截图尺寸失败: {exc}") from exc
+    size = screen_size_from_metadata(metadata)
+    if size is None:
+        raise RuntimeError(
+            "无法从 controller metadata 获取基准尺寸；请显式传入 "
+            "--screen-width/--screen-height 或设置 SCREEN_SIZE"
+        )
+    return size
 
 
 def _val(r, key):
@@ -158,12 +192,22 @@ def main():
     parser.add_argument("--expand", type=int, default=20, help="ROI 扩边像素（推荐 20-30，可先用 generate_sweep.py 测试）")
     parser.add_argument("--post-delay", type=int, default=500)
     parser.add_argument("--timeout", type=int, default=2000)
-    parser.add_argument("--screen-width", type=int, default=None, help="屏幕宽度（默认 720，可通过环境变量 SCREEN_WIDTH 或 SCREEN_SIZE 读取）")
-    parser.add_argument("--screen-height", type=int, default=None, help="屏幕高度（默认 1280，可通过环境变量 SCREEN_HEIGHT 或 SCREEN_SIZE 读取）")
+    parser.add_argument(
+        "--screen-width",
+        type=int,
+        default=None,
+        help="基准宽度；缺省时优先读环境变量，否则从 controller 截图尺寸获取",
+    )
+    parser.add_argument(
+        "--screen-height",
+        type=int,
+        default=None,
+        help="基准高度；缺省时优先读环境变量，否则从 controller 截图尺寸获取",
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
-    screen_w, screen_h = get_screen_size(args.screen_width, args.screen_height)
+    explicit_size = get_screen_size(args.screen_width, args.screen_height)
     # 显式项目相对路径优先；裸文件名按 Interface 声明资源消歧。
     path = resolve_pipeline_path(args.pipeline_file)
     print(f"目标 pipeline: {path}")
@@ -172,10 +216,23 @@ def main():
     print("\n=== Step 1: 连接设备 ===")
     ctrl = connect_device()
     print(f"已连接: {ctrl}")
+    derived_size = explicit_size is None
+    if explicit_size is not None:
+        screen_w, screen_h = explicit_size
+    else:
+        screen_w, screen_h = controller_screen_size(ctrl)
+    print(f"基准分辨率: {screen_w}x{screen_h}")
 
     # === Step 2: OCR + 算 ROI ===
     print(f"\n=== Step 2: OCR 找 '{args.target_text}' ===")
     box, score = find_target_box(ctrl, args.target_text)
+    if derived_size:
+        latest_size = controller_screen_size(ctrl)
+        if latest_size != (screen_w, screen_h):
+            raise RuntimeError(
+                "OCR 前后 controller 坐标尺寸发生变化，OCR box 与基准尺寸可能来自不同屏幕；"
+                "请恢复目标画面后重试，或显式传入 --screen-width/--screen-height"
+            )
     roi = compute_roi(box, args.expand, screen_w, screen_h)
     print(f"匹配: box={box}, score={score:.3f}")
     print(f"扩大 ROI (expand={args.expand}): {roi}")

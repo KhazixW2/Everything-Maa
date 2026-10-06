@@ -47,6 +47,7 @@ Pipeline 由 Node 组成。本 skill 针对**OCR 文本识别节点**，按 Pipe
 | `expand_offset` | ❌ | `20` | ROI 扩边像素（**推荐先用 sweep 找最佳**） |
 | `post_delay` | ❌ | `500` | |
 | `timeout` | ❌ | `2000` | |
+| `screen_width` / `screen_height` | ❌ | controller metadata | 显式参数或 `SCREEN_SIZE` 优先；否则只使用 screencap metadata 的 `coordinate_size`，并在 OCR 前后校验尺寸未变化 |
 | `overwrite` | ❌ | `False` | 节点名冲突时是否覆盖 |
 
 ## 3 步工作流（伪代码）
@@ -69,8 +70,10 @@ matched = [r for r in ocr_results if target_text in (r.text if hasattr(r, "text"
 best = max(matched, key=lambda r: r.score if hasattr(r, "score") else r["score"])
 box = best.box if hasattr(best, "box") else best["box"]
 
-# 扩大 ROI（720p 硬编码 + 4 边裁剪）
-SCREEN_W, SCREEN_H = 720, 1280
+# MaaMCP ADB controller 坐标短边通常为 720，但方向和长边由当前画面决定。
+# 显式传入尺寸时必须与 OCR box 的坐标系一致；否则只使用 screencap metadata 的
+# coordinate_size。image_size 可能已被分辨率处理改变，不能当作 controller 坐标。
+SCREEN_W, SCREEN_H = controller_screen_size(controller_id)
 x, y, w, h = box
 E = expand_offset
 roi = [
@@ -79,6 +82,8 @@ roi = [
     min(SCREEN_W - max(0, x - E), w + 2 * E),
     min(SCREEN_H - max(0, y - E), h + 2 * E),
 ]
+if controller_screen_size(controller_id) != (SCREEN_W, SCREEN_H):
+    raise RuntimeError("OCR 前后屏幕尺寸变化，必须重试以避免 box 和 ROI 使用不同坐标系")
 
 # === Step 3: 合并到目标 pipeline ===
 from maa_mcp.pipeline_tools import load_pipeline, save_pipeline
@@ -127,8 +132,8 @@ save_pipeline(
 ### 步骤 1: Sweep 找最佳 expand
 
 ```bash
-# 生成多个 expand 变体的测试 pipeline
-python "<skill-dir>/scripts/generate_sweep.py" "角色" "46,1248,50,30" 0,5,10,15,20,25,30
+# 生成多个 expand 变体的测试 pipeline；尺寸必须与提供 box 的坐标系一致。
+python "<skill-dir>/scripts/generate_sweep.py" "角色" "46,1248,50,30" 0,5,10,15,20,25,30 --screen-width 720 --screen-height 1280
 ```
 
 然后用 `run_pipeline` 逐个测试每个 `Sweep_<text>_eN` 节点，**用目标项目自己的安全返回节点**恢复页面（详见 [maa-pipeline-testing](../maa-pipeline-testing/SKILL.md)）。记录成功的 expand 值（score ≥ 0.99 为佳）。
@@ -152,7 +157,7 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 - 如果需要 Python，先决定是 CustomAction 还是 CustomRecognition：动作/控制流用 CustomAction；识别后处理和动态 box 返回用 CustomRecognition。
 
 1. **`ocr()` 自动截图**：MaaMCP 的 `ocr()` 工具会自行获取当前画面，调用前不要重复 `screencap()`；如果换了 MCP provider，先读该工具的参数说明确认截图语义。
-2. **ROI 不是越大越好**：默认 `expand=75` 会失败（OCR 把"角色"拆成"电"+"色"）。多数节点 sweet spot 是 `expand=20-30`。
+2. **ROI 不是越大越好**：旧的 `expand=75` 经验值会让 OCR 把"角色"拆成"电"+"色"；当前工具默认 `expand=20`。多数节点 sweet spot 是 `expand=20-30`。
 3. **特殊节点需要小 ROI**："城堡" expand≥20 全失败，**只接受 0-15**（上方有图标 M/3.9m/1077/👍 干扰）。
 4. **`expected` 必须匹配当前资源实际显示文本**：在 MaaGumballs 中文资源里 `["角色"]` 正确、`["Role"]` 找不到；跨语言项目要按目标资源/locale 写实际 OCR 文本或项目约定的 i18n 形式。
 5. **OCR 非确定性**：同一 ROI 不同次结果可能不同，`timeout: 2000` 期间会重试。

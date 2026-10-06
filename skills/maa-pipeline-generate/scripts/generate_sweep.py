@@ -91,6 +91,8 @@ def make_sweep_pipeline(
             "expected": [target_text],
             "roi": roi,
             "action": "DoNothing",  # 只测识别，不点
+            "post_delay": 100,
+            "timeout": 2000,
         }
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(nodes, f, ensure_ascii=False, indent=2)

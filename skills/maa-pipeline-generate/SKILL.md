@@ -45,8 +45,8 @@ Pipeline 由 Node 组成。本 skill 针对**OCR 文本识别节点**，按 Pipe
 | `pipeline_file` | ✅ | — | 目标 pipeline 路径（推荐传主 Interface 声明资源根下的项目相对或绝对路径；`assets/resource/base/pipeline/xxx.json` 是 boilerplate-family 项目示例） |
 | `action_type` | ❌ | `Click` | Click / DoNothing / LongPress / Swipe / ClickKey / InputText |
 | `expand_offset` | ❌ | `20` | ROI 扩边像素（**推荐先用 sweep 找最佳**） |
-| `post_delay` | ❌ | `500` | |
-| `timeout` | ❌ | `2000` | |
+| `post_delay` | ❌ | 不写入 | 需要显式等待时才传；协议默认 `200ms` |
+| `timeout` | ❌ | 不写入 | 需要长等待时才传；协议默认 `20000ms`。`generate_sweep.py` 固定写入 `2000ms`，用于失败变体快速退出 |
 | `screen_width` / `screen_height` | ❌ | controller metadata | 显式参数或 `SCREEN_SIZE` 优先；否则只使用 screencap metadata 的 `coordinate_size`，并在 OCR 前后校验尺寸未变化 |
 | `overwrite` | ❌ | `False` | 节点名冲突时是否覆盖 |
 
@@ -97,14 +97,13 @@ pipeline_path = resolve_pipeline_path(pipeline_file)
 existing = load_pipeline(str(pipeline_path)) or {}
 if node_name in existing and not overwrite:
     raise RuntimeError(f"节点 '{node_name}' 已存在")
-existing[node_name] = {
-    "recognition": "OCR",
-    "expected": [target_text],
-    "roi": roi,
-    "action": action_type,
-    "post_delay": post_delay,
-    "timeout": timeout,
-}
+existing[node_name] = build_node_config(
+    target_text,
+    roi,
+    action_type,
+    post_delay,
+    timeout,
+)
 save_pipeline(
     pipeline_json=json.dumps(existing, ensure_ascii=False, indent=4),
     output_path=str(pipeline_path),

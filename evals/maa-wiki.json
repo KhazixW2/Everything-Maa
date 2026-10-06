@@ -28,6 +28,20 @@
       "prompt": "目标项目运行时是 MaaFramework 5.11.1；MaaLLMWiki 里有更新的版本。请核对 Project Interface V2 pretask 字段语义。",
       "expected_output": "使用目标项目实际运行时的 5.11.1 目录和 pinned 来源核对 pretask 语义，不因为 MaaLLMWiki 有更新版本就改查 latest；目录缺失时才按上游 skill 规则选择相邻可用版本并明确披露版本差距。",
       "files": []
+    },
+    {
+      "id": 5,
+      "eval_name": "explicit-latest-release-overrides-project-pin",
+      "prompt": "目标项目版本锁是 5.12.2，但我想知道 latest release 的 MaaFramework Pipeline schema 变化。",
+      "expected_output": "以用户显式请求的 latest release 版本为准定位对应 generated/maa-framework 目录和 pinned 原始 schema 来源；如需评估升级影响，再把项目版本锁的 5.12.2 作为对比上下文，不能把 5.12.2 文档冒充 latest release。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "eval_name": "resolve-runtime-and-lock-conflict",
+      "prompt": "项目版本锁是 5.12.2，但实际运行的 MaaFramework 是 5.11.1。请核对当前任务的 Pipeline 行为。",
+      "expected_output": "用运行时的 5.11.1 解释当前行为，并披露 5.11.1 与 5.12.2 的不一致；涉及安装、迁移或依赖意图时，再单独用 5.12.2 的锁定来源核对，不能混用两个版本的语义。",
+      "files": []
     }
   ]
 }

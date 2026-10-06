@@ -12,7 +12,7 @@ description: 解释、审查、诊断和修改已有 MaaFramework Project Interf
 1. 在目标项目中定位 `interface.json` 或 `interface.jsonc`。不存在时停止，要求先使用 `$maa-project-create` 创建项目；不得生成孤立的 Interface。
 2. 读取 `interface_version`。只接受 V2；缺失、为 1 或呈现 v1 结构时报告不支持，不提供迁移或兼容写法。
 3. 先读取目标项目已有的 schema 关联、MaaFramework 版本锁、`maatools.config.mts`、Interface import 和语言文件。项目内证据优先于本 skill 的经验。`interface_version: 2` 不是 PI 扩展能力的语义版本；字段能力以项目锁定的 PI 协议版本为准。
-4. 若项目没有足够的协议依据，通过 `$maa-wiki` 从 MaaLLMWiki 总入口定位对应 PI 文档和 `interface*.schema.json` 的 pinned revision，再回到 MaaFramework 官方原始来源核实。记录实际采用的 tag、commit、schema 路径或 URL；不要依赖个人机器上的 MaaFramework 绝对路径。
+4. 若项目没有足够的协议依据，通过 `$maa-wiki` 加载 MaaLLMWiki 上游 `maallmwiki` skill，定位对应 PI 文档和 `interface*.schema.json` 的 pinned revision，再回到 MaaFramework 官方原始来源核实。仅当上游 skill 不可达时，按 `$maa-wiki` 的披露顺序用根 README 降级。记录实际采用的 tag、commit、schema 路径或 URL；不要依赖个人机器上的 MaaFramework 绝对路径。
 5. 保留目标文件现有的 JSON/JSONC、缩进、字段排序、命名和拆分风格，除非用户明确要求统一格式。
 
 本 skill 不维护 PI 字段矩阵、能力快照或版本语义缓存。pretask、Agent `PI_*` 环境、resource hash、`attach_resource_path`、telemetry、setting 和 Preset 快照等上游语义，先按来源优先级从项目证据和 pinned 官方来源发现；无法闭环核实时明确标记为未验证。需要检查字段选择与引用关系时读取 [references/review-guide.md](references/review-guide.md)。需要选择和运行验证工具时读取 [references/validation.md](references/validation.md)。

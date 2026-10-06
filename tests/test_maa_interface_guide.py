@@ -105,6 +105,8 @@ def test_interface_guide_routes_protocol_semantics_to_external_sources():
     assert "## 协议来源发现" in review
     assert "不维护 Project Interface V2 的字段矩阵、版本能力表或语义快照" in review
     assert "$maa-wiki" in review
+    assert "MaaLLMWiki 上游 `maallmwiki` skill" in review
+    assert "按 `$maa-wiki` 的披露顺序用根 README 降级" in review
     assert "pinned tag、commit 或 revision" in review
     assert "不要把历史路径或本地引用写成永久协议来源" in review
     assert "pretask" in review

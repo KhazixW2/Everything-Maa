@@ -11,6 +11,6 @@ Everything Maa keeps third-party runtimes separate from its MIT-licensed source 
 | [MaaLogAnalyzer](https://github.com/MaaXYZ/MaaLogAnalyzer) | MIT | Consumed only through MaaEvidenceKit's log adapter; its packages are not vendored or invoked directly by Everything Maa. |
 | [Playwright MCP](https://github.com/microsoft/playwright-mcp) | Apache-2.0 | `@playwright/mcp@0.0.78`; referenced as an external npm runtime and not vendored. |
 | [MaaFramework](https://github.com/MaaXYZ/MaaFramework) | LGPL-3.0 | Used through its public protocol/runtime; binaries are not bundled here. |
-| [MaaLLMWiki](https://github.com/Windsland52/MaaLLMWiki) | No upstream license declared | The `maa-wiki` skill references the upstream `maallmwiki` Skill and catalog through raw GitHub URLs; neither is vendored or downloaded by Everything Maa. |
+| [MaaLLMWiki](https://github.com/Windsland52/MaaLLMWiki) | No upstream license declared | The `maa-wiki` skill references the upstream `maallmwiki` Skill and catalog through raw GitHub and disclosed jsDelivr URLs; neither is vendored or downloaded by Everything Maa. |
 
 MaaHub adapter metadata records distribution information only. Do not copy third-party MaaHub content into this repository without confirming its license and provenance.

@@ -153,7 +153,7 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 - 先判断节点类型，不要默认所有问题都是 OCR：稳定图标/按钮优先 TemplateMatch，颜色状态可用 ColorMatch，动态文本用 OCR，列表/复杂图像后处理用 CustomRecognition。
 - **点击目标必须由识别结果推导**：生成 Click 节点时不写 `target`，让 MaaFramework 点识别框中心；非文字元素用 `screencap` 裁图存进该资源根的 image 目录后走 TemplateMatch。不要用 `DirectHit` + 硬编码 `target` 跳过识别，也不要识别命中后再用写死的 `target_offset` 挪到未被识别的控件上。写法与例外见 [coordinate-hygiene](../maa-pipeline-guide/references/coordinate-hygiene.md)。
 - **UI 流程未探明时不要先生成节点**：节点的 ROI、`expected` 和模板都应来自实际探索到的画面。起始状态或成功状态还是猜测时，先回到 [`$maa-workflow-build`](../maa-workflow-build/SKILL.md) 的 EXPLORE 阶段用 `ocr`/`screencap`/`click` 走通一次完整流程，再生成节点。
-- Pipeline v1/v2 描述字段写法：v1 的 `recognition` 是算法名，算法参数平铺在节点上；v2 的 `recognition` 和 `action` 用 `{ "type": "...", "param": { ... } }`。MaaFramework v5.x 描述运行时能力，例如 `max_hit`。MaaGumballs 历史文件多为 v1；M9A 当前文件多为 v2，并可能使用 v5.x 字段。
+- Pipeline v1/v2 描述字段写法：v1 的 `recognition` 是算法名，算法参数平铺在节点上；v2 的 `recognition` 和 `action` 用 `{ "type": "...", "param": { ... } }`。MaaGumballs 当前文件多为 v1；M9A 当前文件多为 v2。
 - `generate_node.py --format auto` 只按目标文件现有 `recognition` / `action` 写法选择 Pipeline v1 或 v2；新建文件默认 v2。混合风格文件必须显式选择，不要在同一局部混用两套字段写法。
 - 生成链路时先画父级 `next` 状态机：稳定页面、成功态、弹窗 `[JumpBack]`、加载 `[JumpBack]`、危险确认分支分开建节点。
 - 对会消耗资源或改变账号状态的节点，默认生成 `DoNothing` 或单独验证节点；只有用户明确要执行时才生成直接点击确认。

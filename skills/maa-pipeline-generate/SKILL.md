@@ -45,6 +45,7 @@ Pipeline 由 Node 组成。本 skill 针对**OCR 文本识别节点**，按 Pipe
 | `pipeline_file` | ✅ | — | 目标 pipeline 路径（推荐传主 Interface 声明资源根下的项目相对或绝对路径；`assets/resource/base/pipeline/xxx.json` 是 boilerplate-family 项目示例） |
 | `action_type` | ❌ | `Click` | Click / DoNothing / LongPress / Swipe / ClickKey / InputText |
 | `expand_offset` | ❌ | `20` | ROI 扩边像素（**推荐先用 sweep 找最佳**） |
+| `format` | ❌ | `auto` | `auto` 按目标文件选择 v1/v2；新文件默认 v2，混合风格必须显式选择 |
 | `post_delay` | ❌ | 不写入 | 需要显式等待时才传；协议默认 `200ms` |
 | `timeout` | ❌ | 不写入 | 需要长等待时才传；协议默认 `20000ms`。`generate_sweep.py` 固定写入 `2000ms`，用于失败变体快速退出 |
 | `screen_width` / `screen_height` | ❌ | controller metadata | 显式参数或 `SCREEN_SIZE` 优先；否则只使用 screencap metadata 的 `coordinate_size`，并在 OCR 前后校验尺寸未变化 |
@@ -95,9 +96,11 @@ project_root = find_project_root()
 pipeline_path = resolve_pipeline_path(pipeline_file)
 
 existing = load_pipeline(str(pipeline_path)) or {}
+node_format = detect_pipeline_format(existing, output_format)
 if node_name in existing and not overwrite:
     raise RuntimeError(f"节点 '{node_name}' 已存在")
 existing[node_name] = build_node_config(
+    node_format,
     target_text,
     roi,
     action_type,
@@ -150,7 +153,8 @@ python "<skill-dir>/scripts/generate_node.py" "角色" UI_RoleListPage resource/
 - 先判断节点类型，不要默认所有问题都是 OCR：稳定图标/按钮优先 TemplateMatch，颜色状态可用 ColorMatch，动态文本用 OCR，列表/复杂图像后处理用 CustomRecognition。
 - **点击目标必须由识别结果推导**：生成 Click 节点时不写 `target`，让 MaaFramework 点识别框中心；非文字元素用 `screencap` 裁图存进该资源根的 image 目录后走 TemplateMatch。不要用 `DirectHit` + 硬编码 `target` 跳过识别，也不要识别命中后再用写死的 `target_offset` 挪到未被识别的控件上。写法与例外见 [coordinate-hygiene](../maa-pipeline-guide/references/coordinate-hygiene.md)。
 - **UI 流程未探明时不要先生成节点**：节点的 ROI、`expected` 和模板都应来自实际探索到的画面。起始状态或成功状态还是猜测时，先回到 [`$maa-workflow-build`](../maa-workflow-build/SKILL.md) 的 EXPLORE 阶段用 `ocr`/`screencap`/`click` 走通一次完整流程，再生成节点。
-- MaaGumballs 的历史文件多为平铺字段风格；M9A HEAD 多为 v5 object-form：`action: { type, param }`、`recognition: { type, param }`。生成时沿用目标文件的既有风格，不要在同一局部混用两套格式。
+- Pipeline v1/v2 描述字段写法：v1 的 `recognition` 是算法名，算法参数平铺在节点上；v2 的 `recognition` 和 `action` 用 `{ "type": "...", "param": { ... } }`。MaaGumballs 当前文件多为 v1；M9A 当前文件多为 v2。
+- `generate_node.py --format auto` 只按目标文件现有 `recognition` / `action` 写法选择 Pipeline v1 或 v2；新建文件默认 v2。混合风格文件必须显式选择，不要在同一局部混用两套字段写法。
 - 生成链路时先画父级 `next` 状态机：稳定页面、成功态、弹窗 `[JumpBack]`、加载 `[JumpBack]`、危险确认分支分开建节点。
 - 对会消耗资源或改变账号状态的节点，默认生成 `DoNothing` 或单独验证节点；只有用户明确要执行时才生成直接点击确认。
 - 如果需要 Python，先决定是 CustomAction 还是 CustomRecognition：动作/控制流用 CustomAction；识别后处理和动态 box 返回用 CustomRecognition。

@@ -84,24 +84,77 @@ def controller_screen_size(controller_id) -> tuple[int, int]:
     return size
 
 
+def detect_pipeline_format(pipeline: dict, requested: str = "auto") -> str:
+    """Infer v1 flat fields versus v2 object fields from the target file."""
+    if requested != "auto":
+        return requested
+
+    has_v1 = False
+    has_v2 = False
+    for config in pipeline.values():
+        if not isinstance(config, dict):
+            continue
+        for field in ("recognition", "action"):
+            value = config.get(field)
+            if isinstance(value, str):
+                has_v1 = True
+            elif isinstance(value, dict):
+                has_v2 = True
+
+    if has_v1 and has_v2:
+        raise RuntimeError(
+            "目标文件混合使用 v1 平铺和 v2 object 字段；请显式指定 --format v1 或 --format v2"
+        )
+    if has_v1:
+        return "v1"
+    return "v2"
+
+
 def build_node_config(
+    node_format: str,
     target_text: str,
     roi: list[int],
     action: str,
     post_delay: int | None,
     timeout: int | None,
 ) -> dict:
-    config = {
+    optional: dict[str, int] = {}
+    if post_delay is not None:
+        optional["post_delay"] = post_delay
+    if timeout is not None:
+        optional["timeout"] = timeout
+
+    if node_format == "v2":
+        return {
+            "recognition": {
+                "type": "OCR",
+                "param": {
+                    "expected": [target_text],
+                    "roi": roi,
+                },
+            },
+            "action": {"type": action},
+            **optional,
+        }
+
+    return {
         "recognition": "OCR",
         "expected": [target_text],
         "roi": roi,
         "action": action,
+        **optional,
     }
-    if post_delay is not None:
-        config["post_delay"] = post_delay
-    if timeout is not None:
-        config["timeout"] = timeout
-    return config
+
+
+def read_pipeline(path: Path) -> dict:
+    from maa_mcp.pipeline_tools import load_pipeline
+
+    if not path.exists():
+        return {}
+    existing = load_pipeline(str(path.absolute()))
+    if isinstance(existing, str):
+        raise RuntimeError(f"读取 pipeline 失败: {existing}")
+    return existing or {}
 
 
 def _val(r, key):
@@ -206,8 +259,15 @@ def main():
     parser.add_argument("node_name", help="节点名 (PascalCase)")
     parser.add_argument("pipeline_file", help="目标 pipeline 路径")
     parser.add_argument(
-        "--action", default="Click",
+        "--action",
+        default="Click",
         choices=["Click", "DoNothing", "LongPress", "Swipe", "ClickKey", "InputText"],
+    )
+    parser.add_argument(
+        "--format",
+        choices=["auto", "v1", "v2"],
+        default="auto",
+        help="输出格式；auto 按目标文件选择，新建文件使用 v2",
     )
     parser.add_argument("--expand", type=int, default=20, help="ROI 扩边像素（推荐 20-30，可先用 generate_sweep.py 测试）")
     parser.add_argument(
@@ -241,6 +301,8 @@ def main():
     # 显式项目相对路径优先；裸文件名按 Interface 声明资源消歧。
     path = resolve_pipeline_path(args.pipeline_file)
     print(f"目标 pipeline: {path}")
+    node_format = detect_pipeline_format(read_pipeline(path), args.format)
+    print(f"节点格式: {node_format}")
 
     # === Step 1: 连接设备 ===
     print("\n=== Step 1: 连接设备 ===")
@@ -270,6 +332,7 @@ def main():
     # === Step 3: 合并 ===
     print(f"\n=== Step 3: 合并到 {path.name} ===")
     node_config = build_node_config(
+        node_format,
         args.target_text,
         roi,
         args.action,

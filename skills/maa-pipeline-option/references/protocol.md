@@ -236,7 +236,7 @@ Client 会根据 case 的 name 来匹配用户的 Y/N 输入，其他输入会�
 { "NodeA": { "expected": ["value2"], "enabled": true } }
 ```
 
-> ⚠️ **同名顶层 key 跨文件也会冲突**。`PipelineResMgr::parse_and_override_once` 在合并同一目录下多个 pipeline JSON 时，**严格拒绝**重复顶层 key。Python `json.load()` 静默覆盖检测不出来，必须用目标项目锁定的 Interface / resource 语义检查验证。
+> ⚠️ **同名顶层 key 在同一 resource bundle 内跨文件会冲突**。`PipelineResMgr::parse_and_override_once` 合并该 bundle 的多个 pipeline JSON 时，**严格拒绝**重复顶层 key。后加载的另一个 resource bundle 则按加载顺序覆盖先前 bundle 的同名节点。Python `json.load()` 静默覆盖检测不出来，必须用目标项目锁定的 Interface / resource 语义检查验证。
 
 ---
 

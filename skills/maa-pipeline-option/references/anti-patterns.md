@@ -92,15 +92,19 @@ def handle_sailing_festival(context):
 
 中文做 option 名（用户可见），英文做 pipeline 节点名（代码访问）。混了会让代码和配置都对不上。
 
-### 8. 不要在多文件 pipeline 里重复定义同名节点
+### 8. 不要在同一 resource bundle 内重复定义同名节点
 
-`parse_and_override_once` 合并所有 pipeline JSON 时**严格拒绝**重复顶层 key。检查方法：
+节点名只在**同一个 resource bundle 的 `pipeline/` 命名空间内**全局唯一。`parse_and_override_once`
+合并该 bundle 内所有 pipeline JSON 时**严格拒绝**重复顶层 key；后加载的另一个 resource bundle
+会按加载顺序覆盖先前 bundle 里的同名节点。因此不要把“跨文件会被拒绝”和“跨 bundle 会覆盖”
+混成一条规则。检查方法：
 
 ```bash
 grep -rn "^\s*\"YourNodeName\":" <declared-resource-root>/pipeline/
 ```
 
-两个文件都定义同一个顶层节点会直接让目标项目的 resource 语义检查失败，且 Python `json.load()` 检测不出来（Python 会静默覆盖），必须用项目锁定的加载器或等价语义检查检测。
+同一个 resource bundle 内两个文件定义同一个顶层节点，会直接让目标项目的 resource 语义检查失败；
+Python `json.load()` 检测不出来（Python 会静默覆盖），必须用项目锁定的加载器或等价语义检查检测。
 
 ### 9. 不要为了"配置统一"硬塞 Flag 节点
 

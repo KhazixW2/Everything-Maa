@@ -1,0 +1,18 @@
+{
+  "id": "KhazixW2/maa-wiki",
+  "title": "Maa Wiki",
+  "description": "Route MaaFramework questions and other Maa skills through the authoritative MaaLLMWiki maallmwiki skill to pinned official documentation, schemas, APIs, bindings, releases, and semantic changes.",
+  "author": "KhazixW2",
+  "source": "Everything Maa",
+  "sourceGithub": "https://github.com/KhazixW2/Everything-Maa",
+  "tags": ["knowledge", "documentation", "reference", "official", "skill"],
+  "createdAt": "2026-08-11",
+  "updatedAt": "2026-10-06",
+  "version": "0.1.0",
+  "mfwVersion": "5.12.2",
+  "entry": "../../../skills/maa-wiki/SKILL.md",
+  "readme": "../../../docs/skills/maa-wiki.md",
+  "status": "beta",
+  "type": "skill",
+  "category": "reference"
+}

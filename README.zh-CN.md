@@ -1,12 +1,12 @@
 # Everything Maa
 
-Everything Maa 是一个严格面向 MaaFramework 项目的 AI skills 工具集。核心范围包括从意图到工作流的编排、项目创建与发现、Pipeline 编写与生成、选项接线、节点图谱、测试、历史审计和受控 CLI 操作。
+Everything Maa 是一个严格面向 MaaFramework 项目的 AI skills 工具集。核心范围包括从意图到工作流的编排、项目创建与发现、Project Interface 维护、Pipeline 编写与生成、选项接线、节点图谱、测试、历史审计、受控 CLI 操作和官方 Maa 知识路由。
 
-> 当前状态：预发布开发基线。规范化 skills、原生插件清单、MCP profiles 和安装器均已在本地实现并通过测试；npm 包与 GitHub 仓库尚未发布。
+> 当前状态：已发布基线。规范化 skills、原生插件清单、MCP profiles 和安装器都有本地与 CI 检查；npm 包与 GitHub 仓库已公开。
 
 ## 安装
 
-首次发布到 npm 后，可用下面任一命令安装到当前项目：
+可用下面任一命令安装到当前项目：
 
 ```bash
 npx everything-maa@latest install --target claude
@@ -15,14 +15,14 @@ npx everything-maa@latest install --target codex
 
 在本地仓库试用时，将 `npx everything-maa@latest` 替换为 `node packages/cli/bin/everything-maa.js`。
 
-GitHub 仓库公开后，Claude Code 也可以通过自托管 marketplace 安装原生插件：
+Claude Code 也可以通过自托管 marketplace 安装原生插件：
 
 ```text
 /plugin marketplace add https://github.com/KhazixW2/Everything-Maa
 /plugin install everything-maa@everything-maa
 ```
 
-默认 `core` profile 会安装全部 10 个 skills 并配置 MaaMCP。四个 profile 的边界是固定且版本化的：
+默认 `core` profile 会安装全部 13 个 skills 并配置 MaaMCP。四个 profile 的边界是固定且版本化的：
 
 | Profile | 安装内容 |
 | --- | --- |
@@ -53,10 +53,13 @@ npx everything-maa uninstall --target codex
 | `maa-cli-operate` | 通过 maafw-cli 执行可重复的设备、识别、动作和 Pipeline 操作。 |
 | `maa-project-create` | 通过 create-maa-project 创建、扩展、诊断和更新 Maa 项目。 |
 | `maa-project-init` | 扫描 Maa 项目并生成可复用的 `basic_info.md` 接力文档。 |
+| `maa-wiki` | 将 MaaFramework 知识问题和其它 Maa skills 路由到权威官方文档、schema、API、binding、release 与语义变化。 |
+| `maa-interface-guide` | 审查、诊断和修改已有的 Project Interface V2，并可通过 `@nekosu/maa-tools` 校验。 |
 | `maa-pipeline-guide` | 设计、修改和审查 MaaFramework Pipeline JSON。 |
 | `maa-pipeline-generate` | 生成识别/动作节点并扫描 OCR ROI。 |
 | `maa-pipeline-option` | 贯通 UI、Pipeline 与 Python 的运行时选项。 |
 | `maa-pipeline-testing` | 验证资源、识别、Custom 映射和端到端流程。 |
+| `maa-diagnose` | 责任方未知时，加载权威 MaaEvidenceKit 指引，只读诊断失败并给出唯一失败责任方。 |
 | `maa-pipeline-graph` | 梳理 Pipeline 状态关系与 Python 外部入口。 |
 | `maa-pipeline-history-audit` | 从 Git 历史学习 Pipeline 与 Custom 约定。 |
 
@@ -81,9 +84,9 @@ npx everything-maa uninstall --target codex
 ## 开发与验证
 
 ```bash
-python -m pip install -r requirements-dev.txt
-python -m pytest
-python scripts/validate_skills.py
+uv sync
+uv run python -m pytest
+uv run python scripts/validate_skills.py
 npm test
 npm run release:check
 npm pack --dry-run
@@ -105,7 +108,7 @@ npm run smoke:maafw-cli
 
 ## 范围与依赖
 
-Everything Maa 不复制 create-maa-project、MaaMCP、maafw-cli、Playwright MCP、MaaFramework 二进制或 OCR 模型。MCP 与 CLI 命令契约只调用上游发行包，并按 Everything Maa 版本锁定经过验证的版本。MaaMCP、create-maa-project 和实验性的 maafw-cli skill 需要 `uvx`，Playwright MCP 需要 `npx`；maafw-cli 仅按需运行，不由 profile 持久安装。
+Everything Maa 不复制 create-maa-project、MaaEvidenceKit、MaaMCP、maafw-cli、Playwright MCP、MaaFramework 二进制、OCR 模型、`@nekosu/maa-tools`、MaaLLMWiki 的 `maallmwiki` Skill、catalog 或 Project Interface V2 协议快照。MCP 与 CLI 命令契约只调用上游发行包；create-maa-project 与 MaaEvidenceKit 跟踪 latest，并衔接上游 README 或集成 Skill。`maa-wiki` skill 衔接 raw GitHub URL 上的上游 `maallmwiki` Skill，不下载、缓存或复制该 Skill 和 catalog 内容到安装目录；Interface 与 option 指南通过项目证据和 pinned 上游文档/schema 解析协议语义。MaaMCP、create-maa-project 和实验性的 maafw-cli skill 需要 `uvx`，Playwright MCP 和 `@nekosu/maa-tools` 需要 `npx`；maafw-cli 仅按需运行，不由 profile 持久安装。调用 MaaEvidenceKit 时，通过 `npx` 按需解析 `maa-evidence-kit@latest`；不要回退到 `PATH` 中的旧 `maa-evidence` 可执行文件。
 
 许可证边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 

@@ -1,6 +1,6 @@
 ---
 name: maa-pipeline-option
-description: "Add runtime UI options (select/checkbox/switch/input) to MaaFramework option surfaces such as `assets/interface.json` or `assets/resource/tasks/**/*.json`. Use when adding a user-facing toggle, selector, checkbox, or input; wiring options to `pipeline_override`; aligning option paths with Python `context.get_node_data()` or CustomAction params; or reviewing option behavior across Pipeline JSON and Python."
+description: "Add runtime UI options (select/checkbox/switch/input/hotkey) to a MaaFramework Project Interface and its imported option surfaces. Use when adding a user-facing toggle, selector, checkbox, bounded checkbox, input, password field, or hotkey; wiring options to `pipeline_override`; aligning option paths with Python `context.get_node_data()` or CustomAction params; or reviewing option behavior across declared resources, Pipeline JSON, and Python."
 ---
 
 # Pipeline Option 工作流
@@ -11,22 +11,28 @@ description: "Add runtime UI options (select/checkbox/switch/input) to MaaFramew
 
 新增选项前先查目标项目根目录的 `basic_info.md`。存在且包含第 0 节时，读取“0. Maa Skills 接力协议”和第 1/2/3/6 节，先确认 interface、resource/task entry、目标节点与 Python 外部调用，再按本 skill 查实际 option surface 和读取路径。文档只是缓存：`pipeline_override`、`context.get_node_data()` 和 Custom 参数路径必须在当前文件中闭环核实。文件缺失或没有第 0 节时按本 skill 直接发现 option surface；不得自动调用 `$maa-project-init`，只有用户明确要求初始化或刷新时才调用。相关源码比文档新时视为缓存可能过期并以源码为准，不自动刷新或覆盖已有非空文档。
 
+## Option Surface 发现规则
+
+从主 `interface.json` / `interface.jsonc` 出发，而不是从目录约定猜测。`import[]` 相对主 Interface 目录解析；导入片段实际可贡献哪些 option 相关声明，必须按目标项目锁定的 PI 版本和 schema 核实。`resource[].path` 同样相对主 Interface 目录解析，目标 Pipeline 文件从这些资源根读取。
+
+M9A 是根目录 `interface.json` + 根目录 `tasks/**/*.json` import + `resource/base` 与渠道资源组合；它的 agent 也是数组形式并声明 `agent/bootstrap.py`。`assets/interface.json` 与 `assets/resource/**` 不是 M9A 的布局，但它们是 MaaPracticeBoilerplate 系项目的常见有效布局；仍必须由主 Interface 的声明推导，不能按目录约定猜测。
+
 ## TL;DR：先识别 option surface
 
-新增一个 UI 选项需要先识别本项目使用的 option surface。MaaGumballs 主要是 `assets/interface.json`，M9A 同时使用 `assets/interface.json` 与 `assets/resource/tasks/**/*.json`。不要假设所有 Maa 项目只有一种入口。
+新增一个 UI 选项需要先识别本项目实际声明的 option surface。选项可以定义在主 Interface，也可以定义在主 Interface import 的任务文件；task 注册处可能在主文件，也可能来自 import。不要按文件路径或 `assets/...` 约定猜测。
 
 常见联动点如下，按项目实际协议取用，缺关键点会导致 UI 看不到选项或运行时读不到值：
 
 | # | 位置 | 内容 |
 |---|------|------|
-| 1 | option 定义处 | `assets/interface.json` 的 `option` 字典，或 `assets/resource/tasks/**/*.json` 里的 task option 定义 |
-| 2 | task 注册处 | `interface.json` task 的 `option: []`，或 tasks JSON 的任务/预设引用 |
-| 3 | `assets/resource/base/pipeline/*.json` | **预定义**目标节点（pipeline_override 不会创建节点） |
+| 1 | option 定义处 | 主 Interface 的 `option` 字典，或主 Interface `import[]` 指向文件里的 `option` 字典 |
+| 2 | task 注册处 | 主 Interface 或 import 文件里的 task `option: []` / group / preset 引用 |
+| 3 | 主 Interface 声明资源根下的 `pipeline/**/*.json` | **预定义**目标节点（pipeline_override 不会创建节点） |
 | 4 | Python 代码（仅 Python 需要读取或执行 Custom 时必需） | `context.get_node_data()`、`argv.custom_action_param`、`argv.custom_recognition_param` 与 option 路径保持一致 |
 
 > ⚠️ **pipeline_override 只做属性合并，不会凭空创建节点。** 少了第 3 步，`context.get_node_data()` 会返回 `None`，运行时静默失败。
 
-完整协议参考（嵌套 option、global_option、controller/resource 限制、占位符注入）：[references/protocol.md](references/protocol.md)
+本 skill 不维护 option type、字段矩阵、默认值语义或版本能力快照。字段的完整协议来源通过 `$maa-wiki` 定位 Project Interface V2 文档、`interface*.schema.json` 和目标项目锁定的 revision 后读取；本地只负责接线边界和项目内闭环。
 
 ## 历史校正
 
@@ -37,14 +43,17 @@ description: "Add runtime UI options (select/checkbox/switch/input) to MaaFramew
 
 ---
 
-## 4 种 type 速查
+## 常见接线映射
+
+下表是本项目常见的选项接线示例，不是协议全量清单。遇到新 type 或字段时，先回到 pinned 官方协议来源；不要根据这份表推断可用性。
 
 | type | 选择 | override 字段 | 节点预定义形态 |
 |------|------|---------------|---------------|
 | `select` | 单选互斥 | `expected` | `recognition: "OCR"` + `expected: [...]` |
 | `switch` | 二元 Yes/No | `enabled`（或项目已有的 `enable`） | `{"enabled": bool}` / `{"enable": bool}` |
-| `input` | 自由文本 | `{name}` 占位符可注入目标字段 | 按最终读取方预定义 `expected` 或 `action.param.custom_action_param` |
-| `checkbox` | 多选 | `enabled` | `{"enabled": false}` |
+| `input` | 自由文本或密码 | `{name}` 占位符可注入目标字段 | 按最终读取方预定义 `expected` 或 `action.param.custom_action_param` |
+| `checkbox` | 多选，可用 `min_count` / `max_count` 约束 | `enabled` | `{"enabled": false}` |
+| `hotkey` | 快捷键，替换为虚拟键码整数 | `key` | 按键动作节点预定义 |
 
 ## 选哪个模式？
 
@@ -54,13 +63,14 @@ description: "Add runtime UI options (select/checkbox/switch/input) to MaaFramew
 | 从多个互斥选项里选一个值 | **B**（select + OCR 节点） |
 | 同时启用多个独立的功能模块 | **C**（checkbox + 多个 Flag 节点） |
 | 用户输入自定义文本 | **D**（input + 占位符注入） |
+| 捕获用户快捷键并传给按键动作 | **hotkey + `{name}.primary`** |
 | 切换行为（点哪个按钮 / 走哪条 next 链）但不想改 Python | **E**（pure override 现有节点字段） |
 
 > **经验法则**：行为只等于“覆盖已有节点字段”时优先 pure override；一旦需要运行时数据、计数、动态识别、失败策略或跨节点状态，改用 Flag + Python / CustomAction / CustomRecognition。目标是让改动面和逻辑复杂度匹配。
 
 ### 先确认代码读取路径
 
-加选项前先 `rg "get_node_data|_node_enabled|Flag_" agent assets`，确认这次配置到底由谁读取。
+加选项前先 `rg "get_node_data|_node_enabled|Flag_" agent <declared-resource-root>`，确认这次配置到底由谁读取。
 
 常见对应关系:
 
@@ -114,6 +124,8 @@ if _node_enabled(context, "OptionalNode"):
 | 旧代码无条件开启 | `Yes`（兼容） |
 | 旧代码无条件关闭 | `No`（兼容） |
 
+不要把敏感输入、秘密或凭证放进 `default`、Preset、参数示例、日志或文档。具体 `password`、数量约束和默认值限制先核对 pinned 官方协议与项目 schema；实现时保持既有行为不变，并让默认值满足当前字段约束。
+
 ---
 
 ## 读取位置
@@ -131,7 +143,7 @@ if _node_enabled(context, "OptionalNode"):
 
 1. **先复用现有模式**：参考同项目里现成的同类选项（开关 → `开启5月城堡相亲`；选择 → `选择刷取任务国家`）
 2. **3 处同步改完再跑**：不要中途停下来"先编译试试"
-3. **JSON 改完跑资源加载检查**：本仓库与 M9A 的真实路径是 `python tools/ci/check_resource.py assets/resource/base`；如果目标项目路径不同，先用 `Get-ChildItem tools -Recurse -Filter check_resource.py` 发现真实脚本。pipeline 加载错误（如重复 key）会立刻报
+3. **JSON 改完跑项目锁定检查**：先读取 `package.json` scripts、lockfile、`packageManager` 和 `maatools.config.mts`。M9A 的入口是 `pnpm check`，其中 `check:maa` 通过项目锁定的 `@nekosu/maa-tools check` 加载 Interface 和声明资源；不要把 `python tools/ci/check_resource.py assets/resource/base` 当成通用或 M9A 命令。
 4. **默认值遵循现状**：选项是"开"还是"关"取决于旧代码行为，不是你的偏好
 5. **在 task 的 `doc` 数组里加一行说明**：用户能看懂每个选项的作用
 6. **让 option 通道匹配实际复杂度**：行为只动已有 pipeline 字段时用 pure override；Python 需要做真实判断、计数、动态识别或安全策略时，用 Flag + Python / CustomAction / CustomRecognition，不要为了少写 Python 把复杂逻辑硬塞进 JSON。
@@ -149,17 +161,17 @@ if _node_enabled(context, "OptionalNode"):
 1. **JSON 语法检查**
 
    ```bash
-   python -c "import json; json.load(open('assets/interface.json', encoding='utf-8'))"
-   python -c "import json; json.load(open('assets/resource/base/pipeline/auto_task.json', encoding='utf-8'))"
+   python -c "import json; json.load(open('<main-interface-or-import>', encoding='utf-8'))"
+   python -c "import json; json.load(open('<declared-pipeline-file>', encoding='utf-8'))"
    ```
 
 2. **资源加载检查**
 
    ```bash
-   python tools/ci/check_resource.py assets/resource/base
+   <project-locked-validation-command>  # 例如 M9A: pnpm check
    ```
 
-   期望输出 `All directories checked.`
+   期望采用项目已有检查的通过结果；JSONC 文件必须用支持 JSONC 的解析方式，不要用严格 JSON 误判。
 
 3. **Pipeline 节点测试**（可选）
 
@@ -175,4 +187,4 @@ if _node_enabled(context, "OptionalNode"):
 
 ## 完整协议
 
-更多 type 字段、嵌套 option、global_option、controller/resource 限制、`{占位符}` 注入机制等高级特性见 [references/protocol.md](references/protocol.md)。
+字段合法性、嵌套 option、控制器/资源限制、占位符、hotkey、password 和数量约束等协议语义，通过 `$maa-wiki` 定位 Project Interface V2 官方文档、schema 和 pinned revision 后读取。跨 Interface 的引用、pretask、Agent `PI_*` 环境、resource hash 与 Preset 快照按 `$maa-interface-guide` 的 [review-guide.md](../maa-interface-guide/references/review-guide.md)发现来源并审查；不要把本仓库文件当成协议缓存。

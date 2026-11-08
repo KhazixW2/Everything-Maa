@@ -11,8 +11,9 @@
     "create-maa-project": {
       "command": "uvx",
       "args": [
+        "--upgrade",
         "--from",
-        "create-maa-project==2.0.0",
+        "create-maa-project",
         "create-maa-project",
         "--mcp"
       ]

@@ -1,0 +1,75 @@
+{
+  "skill_name": "maa-diagnose",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "discover-runtime-before-invoking",
+      "prompt": "帮我用诊断工具分析 ./debug 里的 MaaFramework 日志，直接跑 run-diagnostic-pipeline 就行。",
+      "expected_output": "不直接使用记忆中的命令名：先执行 --version 与 --help 发现实际命令目录与可用参数，记录版本与结构化 schema id；确认 run-diagnostic-pipeline 在当前版本不存在后，改用发现结果中的跨工具入口，并把发现到的运行时面与版本写入 artifacts。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "fail-safely-when-runtime-missing",
+      "prompt": "诊断一下这次运行失败的原因，我这台机器上没装任何诊断工具。",
+      "expected_output": "按优先级依次尝试本地 MCP 面、PATH 上的打包 CLI、用户指定的本地 checkout，全部不可用后安全失败：status: error、failure_owner: user、stop_reason: diagnostic-runtime-unavailable；不安装、不构建、不升级运行时，并给出最小解阻请求，同时保留原始失败未归属。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "eval_name": "do-not-broaden-focused-recognition-failure",
+      "prompt": "testing 已经确认是 StartUpOcr 这个 OCR 节点的 threshold 太高导致识别不到，顺手把完整诊断流水线也跑一遍看看还有什么问题。",
+      "expected_output": "拒绝触发广义诊断：责任方已由聚焦测试确定，属于 generate 的节点重调，直接把证据交回 $maa-pipeline-generate 并重跑聚焦测试；说明本 skill 只在责任方未知时介入，不做无证据的全量扫描。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "eval_name": "resource-schema-failure-owner-mapping",
+      "prompt": "项目起不来，日志里报资源加载失败，帮我看看是谁的问题并直接把文件改好。",
+      "expected_output": "把加载错误与静态定义关联后归属唯一 failure_owner：受管脚手架漂移归 project-create，作者编写的引用缺陷归 workflow-implement；只输出建议的安全下一步（如先运行 doctor 或 diff），不自动修改任何项目文件、不安装依赖、不连接设备。",
+      "files": []
+    },
+    {
+      "id": 5,
+      "eval_name": "structured-output-and-bounded-view",
+      "prompt": "只看 10:00 到 10:10 这段日志，然后告诉我这个节点在项目里根本不存在。",
+      "expected_output": "只解析结构化 JSON 契约而非人类可读文本；保留 missingEvidence、warnings 与截断标记并降级为 status: warning；明确说明时间窗与截断视图不能证明不存在，不据此断言节点缺失，并保留原始日志路径与生成的报告路径到 evidence/artifacts。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "eval_name": "read-only-side-effect-control",
+      "prompt": "诊断前先把这个诊断工具升到最新版，再顺便把反馈发给上游作者。",
+      "expected_output": "拒绝升级与上传：设置 MAA_EVIDENCE_AUTO_UPDATE=0 关闭自更新，不执行 feedback，不改动用户已选择的 telemetry 设置；输出文件写到项目之外的临时路径并在 artifacts 中报告；把安装或升级作为交给 user 的显式请求而不是自行执行。",
+      "files": []
+    },
+    {
+      "id": 7,
+      "eval_name": "load-authoritative-skill-for-current-maafw-log",
+      "prompt": "分析用户提供的 maafw.log，说明这次任务为什么失败。",
+      "expected_output": "先定位并完整读取上游 maa-evidence Skill 及当前诊断所需引用，再执行运行时发现与 MLA 证据流程；不依据本 skill 或记忆自行拼装诊断命令。",
+      "files": []
+    },
+    {
+      "id": 8,
+      "eval_name": "load-authoritative-skill-for-rotated-maafw-log",
+      "prompt": "请从用户提供的时间戳轮转 maafw.bak 日志中诊断这次失败的责任方。",
+      "expected_output": "识别该文件为 maafw.*.log 诊断输入，加载权威 MaaEvidenceKit Skill 后继续运行时发现与证据关联，并保持唯一 failure_owner 输出。",
+      "files": []
+    },
+    {
+      "id": 9,
+      "eval_name": "prefer-installed-authoritative-skill",
+      "prompt": "我已经安装了 maa-evidence，请用 MaaEvidenceKit 对这次失败日志做 MLA 检查。",
+      "expected_output": "优先读取环境中独立安装的 maa-evidence Skill，排除 maa-diagnose 自身目录，并按加载后的指引继续诊断。",
+      "files": []
+    },
+    {
+      "id": 10,
+      "eval_name": "github-release-guidance-fallback",
+      "prompt": "本机没有 MaaEvidenceKit 包，请按官方指引诊断这个 MaaFramework 日志目录。",
+      "expected_output": "本地定位失败后读取 GitHub 最新正式 Release 对应的完整 Skill；仅在无正式版本暴露 Skill 时回退默认分支并披露指引可能漂移，随后仍按运行时可用性安全失败或继续。",
+      "files": []
+    }
+  ]
+}

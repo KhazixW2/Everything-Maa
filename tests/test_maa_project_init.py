@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,30 @@ def load_analyzer():
 def write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def test_load_json_accepts_jsonc_syntax(tmp_path: Path) -> None:
+    analyzer = load_analyzer()
+    path = tmp_path / "pipeline.json"
+    path.write_text(
+        """{
+          // Pipeline files in M9A may contain comments.
+          "Start": {
+            "url": "https://example.invalid/not-a-comment",
+            /* Keep newline positions useful in parser errors. */
+            "next": ["Done",]
+          },
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    assert analyzer.load_json(path) == {
+        "Start": {
+            "url": "https://example.invalid/not-a-comment",
+            "next": ["Done"],
+        }
+    }
 
 
 def test_custom_action_name_supports_v1_and_v2_syntax() -> None:
@@ -198,6 +223,401 @@ def make_consumer_project(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return root
+
+
+def make_standard_interface_project(tmp_path: Path) -> Path:
+    root = tmp_path / "StandardMaaProject"
+    write_json(
+        root / "interface.json",
+        {
+            "interface_version": 2,
+            "name": "standard-maa-project",
+            "github": "https://example.invalid/standard-maa-project",
+            "controller": [{"name": "ADB", "type": "Adb"}],
+            "resource": [{"name": "default", "path": ["./resource/base"]}],
+            "agent": [
+                {
+                    "child_exec": "uv",
+                    "child_args": ["run", "python", "agent/bootstrap.py"],
+                }
+            ],
+            "import": ["tasks/feature.json"],
+        },
+    )
+    write_json(
+        root / "tasks" / "feature.json",
+        {
+            "task": [{"name": "Feature", "entry": "Start", "option": ["Mode"]}],
+            "option": {"Mode": {"type": "switch", "cases": []}},
+            "preset": [
+                {"name": "Default", "task": [{"name": "Feature", "enabled": True}]}
+            ],
+        },
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "Start": {
+                "recognition": "DirectHit",
+                "action": "DoNothing",
+                "next": ["Done"],
+            },
+            "Done": {"recognition": "DirectHit"},
+        },
+    )
+    bootstrap = root / "agent" / "bootstrap.py"
+    bootstrap.parent.mkdir(parents=True, exist_ok=True)
+    bootstrap.write_text("# bootstrap\n", encoding="utf-8")
+    return root
+
+
+def test_analyze_project_loads_interface_imports_and_agent_array(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = make_standard_interface_project(tmp_path)
+
+    result = analyzer.analyze_project(root)
+
+    assert result["project_url"] == "https://example.invalid/standard-maa-project"
+    assert result["interface_path"] == "interface.json"
+    assert result["interface_imports"]["declared"] == ["tasks/feature.json"]
+    assert result["interface_imports"]["loaded"] == ["tasks/feature.json"]
+    assert [task["entry"] for task in result["tasks"]] == ["Start"]
+    assert result["resource_groups"][0]["raw_paths"] == ["./resource/base"]
+    assert result["pipeline"]["task_flow_graphs"][0]["entry_found"] is True
+    assert result["agent_scripts"]["agent_config_count"] == 1
+    assert result["agent_scripts"]["declared_resolved_count"] == 1
+    assert result["agent_scripts"]["declared_unresolved_count"] == 0
+    assert result["agent_scripts"]["orphan_declarations"] == []
+    interface, _ = analyzer.load_interface_bundle(root / "interface.json")
+    assert interface["preset"][0]["name"] == "Default"
+
+
+def test_analyze_project_expands_wildcard_interface_imports(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "M9AStyleProject"
+    write_json(
+        root / "interface.json",
+        {
+            "resource": [{"name": "default", "path": ["./resource/base"]}],
+            "import": ["tasks/**/*.json"],
+        },
+    )
+    write_json(
+        root / "tasks" / "feature.json",
+        {"task": [{"name": "Feature", "entry": "Start"}]},
+    )
+    write_json(
+        root / "tasks" / "daily" / "login.json",
+        {"task": [{"name": "Login", "entry": "Login"}]},
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "Start": {"recognition": "DirectHit"},
+            "Login": {"recognition": "DirectHit"},
+        },
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_imports"]["declared"] == ["tasks/**/*.json"]
+    assert result["interface_imports"]["loaded"] == [
+        "tasks/daily/login.json",
+        "tasks/feature.json",
+    ]
+    assert [task["name"] for task in result["tasks"]] == ["Login", "Feature"]
+    assert all(flow["entry_found"] for flow in result["pipeline"]["task_flow_graphs"])
+
+
+def test_empty_wildcard_interface_import_is_diagnosed(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "EmptyWildcard"
+    write_json(root / "interface.json", {"import": ["tasks/**/*.json"]})
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_imports"]["missing"] == ["tasks/**/*.json"]
+    assert any("没有匹配到任何文件" in warning for warning in result["interface_imports"]["warnings"])
+
+
+def test_analyze_project_prefers_root_interface_and_declared_resources(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = make_standard_interface_project(tmp_path)
+    write_json(
+        root / "assets" / "interface.json",
+        {
+            "resource": [{"path": ["./resource/legacy"]}],
+            "task": [{"name": "Legacy", "entry": "LegacyStart"}],
+        },
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_path"] == "interface.json"
+    assert [task["name"] for task in result["tasks"]] == ["Feature"]
+    assert all(
+        "resource/base" in path
+        for group in result["resource_groups"]
+        for path in group["paths"]
+    )
+
+
+def test_analyze_project_does_not_infer_undeclared_resource_roots(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "NoInterface"
+    write_json(
+        root / "assets" / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_path"] == ""
+    assert result["resource_groups"] == []
+    assert result["pipeline"]["node_names"] == []
+
+
+def test_analyze_project_supports_root_interface_jsonc(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "JsoncInterface"
+    root.mkdir()
+    (root / "interface.jsonc").write_text(
+        """{
+          // Paths are relative to this main Interface.
+          "controller": [{"type": "Adb"}],
+          "resource": [{"name": "base", "path": ["./resource/base"]}],
+          "import": ["tasks/feature.jsonc",],
+        }
+        """,
+        encoding="utf-8",
+    )
+    tasks = root / "tasks"
+    tasks.mkdir()
+    (tasks / "feature.jsonc").write_text(
+        """{
+          "task": [{"name": "Feature", "entry": "Start",}],
+        }
+        """,
+        encoding="utf-8",
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_path"] == "interface.jsonc"
+    assert result["interface_imports"]["loaded"] == ["tasks/feature.jsonc"]
+    assert [task["name"] for task in result["tasks"]] == ["Feature"]
+    assert result["pipeline"]["task_flow_graphs"][0]["entry_found"] is True
+
+
+def test_analyze_project_counts_imported_tasks_in_assets_interface_bundle(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "BoilerplateMaaProject"
+    assets = root / "assets"
+    assets.mkdir(parents=True)
+    (assets / "interface.jsonc").write_text(
+        """{
+          // Boilerplate-family projects may keep all task declarations in imports.
+          "controller": [{"type": "Adb"}],
+          "resource": [{"name": "default", "path": ["./resource/base"]}],
+          "agent": {
+            "child_exec": "python",
+            "child_args": ["-u", "../agent/main.py"],
+          },
+          "task": [],
+          "import": ["tasks/feature.jsonc",],
+        }
+        """,
+        encoding="utf-8",
+    )
+    tasks = assets / "tasks"
+    tasks.mkdir()
+    (tasks / "feature.jsonc").write_text(
+        """{
+          "task": [
+            {"name": "Feature", "entry": "Start", "option": ["Mode"]},
+            // Display-only separator entries still belong to the raw task count.
+            {"name": "----------------", "entry": "DisplaySeparator"},
+          ],
+          "option": {"Mode": {"type": "switch", "cases": []}},
+          "preset": [
+            {"name": "Default", "task": [{"name": "Feature", "enabled": true}]}
+          ],
+        }
+        """,
+        encoding="utf-8",
+    )
+    write_json(
+        assets / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "Start": {"recognition": "DirectHit", "action": "DoNothing"},
+            "DisplaySeparator": {"recognition": "DirectHit", "action": "DoNothing"},
+        },
+    )
+    agent = root / "agent" / "main.py"
+    agent.parent.mkdir(parents=True, exist_ok=True)
+    agent.write_text("# agent entry\n", encoding="utf-8")
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_path"] == "assets/interface.jsonc"
+    assert result["interface_imports"]["loaded"] == ["tasks/feature.jsonc"]
+    assert [task["name"] for task in result["tasks"]] == [
+        "Feature",
+        "----------------",
+    ]
+    assert all(flow["entry_found"] for flow in result["pipeline"]["task_flow_graphs"])
+    assert result["resource_groups"][0]["paths"] == [
+        (assets / "resource" / "base").resolve().as_posix()
+    ]
+    assert result["agent_scripts"]["declared_resolved_count"] == 1
+    assert [Path(item).resolve() for item in result["agent_scripts"]["declared_resolved"]] == [
+        agent.resolve()
+    ]
+
+
+def test_malformed_interface_jsonc_is_reported_without_stopping_analysis(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "MalformedMainInterface"
+    root.mkdir()
+    (root / "interface.jsonc").write_text(
+        '{"resource": [{"path": ["./resource/base"]}] /*',
+        encoding="utf-8",
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["interface_path"] == "interface.jsonc"
+    assert result["resource_groups"] == []
+    assert result["pipeline"]["node_names"] == []
+    assert any(
+        "无法读取主 Interface" in warning
+        for warning in result["interface_imports"]["warnings"]
+    )
+
+
+def test_malformed_interface_import_is_reported_without_stopping_analysis(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "MalformedInterfaceImport"
+    write_json(
+        root / "interface.json",
+        {
+            "resource": [{"name": "default", "path": ["./resource/base"]}],
+            "import": ["tasks/broken.json"],
+        },
+    )
+    (root / "tasks").mkdir()
+    (root / "tasks" / "broken.json").write_text(
+        '{"task": [] /*',
+        encoding="utf-8",
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["tasks"] == []
+    assert result["interface_imports"]["missing"] == ["tasks/broken.json"]
+    assert any(
+        "tasks/broken.json" in warning
+        for warning in result["interface_imports"]["warnings"]
+    )
+    assert "Start" in result["pipeline"]["node_names"]
+
+
+def test_malformed_main_interface_shapes_are_diagnosed_without_crashing(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "MalformedInterfaceShapes"
+    write_json(
+        root / "interface.json",
+        {
+            "task": "not-an-array",
+            "preset": "not-an-array",
+            "option": ["not-an-object"],
+            "resource": [
+                "not-an-object",
+                {"name": 42, "path": [123, "./resource/base"]},
+            ],
+            "import": ["tasks/feature.json"],
+        },
+    )
+    write_json(
+        root / "tasks" / "feature.json",
+        {"task": [{"name": "Feature", "entry": "Start"}]},
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+    warnings = result["interface_imports"]["warnings"]
+
+    assert [task["name"] for task in result["tasks"]] == ["Feature"]
+    assert result["resource_groups"][0]["raw_paths"] == ["./resource/base"]
+    assert any("task 字段不是数组" in warning for warning in warnings)
+    assert any("preset 字段不是数组" in warning for warning in warnings)
+    assert any("option 字段不是 object" in warning for warning in warnings)
+    assert any("resource[0] 不是 JSON object" in warning for warning in warnings)
+    assert any("resource[1].path 不是字符串或字符串数组" in warning for warning in warnings)
+    assert "Start" in result["pipeline"]["node_names"]
+
+
+def test_missing_interface_import_is_reported_without_stopping_analysis(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "BrokenImport"
+    write_json(
+        root / "interface.json",
+        {
+            "interface_version": 2,
+            "name": "broken-import",
+            "controller": [{"type": "Adb"}],
+            "resource": [{"name": "default", "path": ["./resource/base"]}],
+            "import": ["tasks/missing.json"],
+        },
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"Start": {"recognition": "DirectHit"}},
+    )
+
+    result = analyzer.analyze_project(root)
+
+    assert result["tasks"] == []
+    assert result["interface_imports"]["declared"] == ["tasks/missing.json"]
+    assert result["interface_imports"]["loaded"] == []
+    assert result["interface_imports"]["missing"] == ["tasks/missing.json"]
+    assert any("tasks/missing.json" in warning for warning in result["interface_imports"]["warnings"])
+    assert "Start" in result["pipeline"]["node_names"]
+
+
+def test_unique_existing_resource_dirs_preserves_case_sensitive_paths():
+    analyzer = load_analyzer()
+    groups = [
+        {"existing_paths": ["/tmp/MaaProject/Resource/Base"]},
+        {"existing_paths": ["/tmp/MaaProject/resource/base"]},
+    ]
+
+    result = analyzer.unique_existing_resource_dirs(groups)
+
+    if os.name == "posix":
+        assert [path.as_posix() for path in result] == [
+            "/tmp/MaaProject/Resource/Base",
+            "/tmp/MaaProject/resource/base",
+        ]
+    else:
+        assert [path.as_posix() for path in result] == [
+            "/tmp/MaaProject/Resource/Base",
+        ]
 
 
 def test_analyze_project_finds_entries_edges_common_nodes_and_images(tmp_path: Path):
@@ -462,6 +882,32 @@ class TestAnalyzeAgentScripts:
         assert result["declared_resolved"] == []
         assert result["warnings"] == []
 
+    def test_malformed_agent_array_entries_are_reported(self, tmp_path: Path):
+        analyzer = load_analyzer()
+        root = _build_minimal_project(
+            tmp_path,
+            [{"child_args": ["agent/main.py"]}, "not-an-object"],
+        )
+        interface_path = root / "assets" / "interface.json"
+        interface = json.loads(interface_path.read_text(encoding="utf-8"))
+
+        result = analyzer.analyze_agent_scripts(root, interface_path, interface["agent"])
+
+        assert result["agent_block_present"] is True
+        assert result["agent_config_count"] == 1
+        assert any("agent[1] 不是 JSON object" in warning for warning in result["warnings"])
+
+    def test_empty_agent_array_remains_a_present_block(self, tmp_path: Path):
+        analyzer = load_analyzer()
+        root = _build_minimal_project(tmp_path, [])
+        interface_path = root / "assets" / "interface.json"
+
+        result = analyzer.analyze_agent_scripts(root, interface_path, [])
+
+        assert result["agent_block_present"] is True
+        assert result["agent_config_count"] == 0
+        assert any("agent 数组为空" in warning for warning in result["warnings"])
+
     def test_unresolved_when_file_missing(self, tmp_path: Path):
         analyzer = load_analyzer()
         # Use the existing make_consumer_project fixture which has child_args pointing to ./agent/main.py
@@ -487,7 +933,7 @@ class TestAnalyzeAgentScripts:
         assert result["declared_unresolved_count"] == 0
         assert any(item.endswith("agent\\main.py") or item.endswith("agent/main.py") for item in result["declared_resolved"])
 
-    def test_orphan_declarations_when_outside_convention(self, tmp_path: Path):
+    def test_interface_declaration_is_authoritative_outside_convention(self, tmp_path: Path):
         analyzer = load_analyzer()
         # child_args 指向 agent/custom_entry.py，不在 AGENT_ENTRY_BASENAMES 清单
         root = _build_minimal_project(
@@ -503,8 +949,7 @@ class TestAnalyzeAgentScripts:
             interface = json.load(fh)
         result = analyzer.analyze_agent_scripts(root, interface_path, interface.get("agent") or {})
         assert result["declared_resolved_count"] == 1
-        assert len(result["orphan_declarations"]) == 1
-        assert result["orphan_declarations"][0].endswith("custom_entry.py")
+        assert result["orphan_declarations"] == []
 
     def test_unused_candidates_when_discovered_not_referenced(self, tmp_path: Path):
         analyzer = load_analyzer()
@@ -616,3 +1061,265 @@ def test_analyze_project_includes_agent_scripts_field(tmp_path: Path):
     assert "agent_scripts" in result
     assert result["agent_scripts"]["agent_block_present"] is True
     assert result["agent_scripts"]["declared_unresolved_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Node-level `anchor` field resolution (regression test for issue #8)
+# ---------------------------------------------------------------------------
+
+
+def test_collect_anchor_defs_parses_string_list_object_and_clear_forms():
+    analyzer = load_analyzer()
+
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": "Cooking"}) == [
+        {"anchor": "Cooking", "target": "Cook", "cleared": False}
+    ]
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": ["A", "B"]}) == [
+        {"anchor": "A", "target": "Cook", "cleared": False},
+        {"anchor": "B", "target": "Cook", "cleared": False},
+    ]
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": {"Cooking": "TargetNode"}}) == [
+        {"anchor": "Cooking", "target": "TargetNode", "cleared": False}
+    ]
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": {"Cooking": ""}}) == [
+        {"anchor": "Cooking", "target": None, "cleared": True}
+    ]
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": {"Cooking": None}}) == [
+        {"anchor": "Cooking", "target": None, "cleared": True}
+    ]
+    assert analyzer.collect_anchor_defs("Cook", {}) == []
+    assert analyzer.collect_anchor_defs("Cook", {"anchor": ""}) == []
+
+
+def test_anchor_string_and_list_forms_resolve_multi_target_without_conflict(tmp_path: Path):
+    analyzer = load_analyzer()
+    write_json(
+        tmp_path / "pipeline" / "main.json",
+        {
+            "CookNodeA": {"recognition": "DirectHit", "anchor": "Cooking"},
+            "CookNodeB": {"recognition": "DirectHit", "anchor": ["Cooking", "Prep"]},
+            "Chef": {
+                "recognition": "DirectHit",
+                "next": ["[Anchor]Cooking", "[Anchor]Prep"],
+            },
+        },
+    )
+
+    result = analyzer.analyze_pipeline_files(tmp_path, [tmp_path / "pipeline" / "main.json"])
+
+    assert result["unresolved_refs"] == []
+    assert result["unresolved_anchor_refs"] == []
+    assert result["dangling_anchor_targets"] == []
+    edge_targets = {(edge["source"], edge["target"]) for edge in result["edges"]}
+    # "Cooking" has two targets (CookNodeA and CookNodeB); both edges are kept,
+    # not flagged as a conflict. "Prep" independently also targets CookNodeB.
+    assert ("Chef", "CookNodeA") in edge_targets
+    assert ("Chef", "CookNodeB") in edge_targets
+    assert "CookNodeA" not in result["isolated_nodes"]
+    assert "CookNodeB" not in result["isolated_nodes"]
+    assert "CookNodeA" not in result["zero_in_degree_nodes"]
+    assert "CookNodeB" not in result["zero_in_degree_nodes"]
+
+
+def test_anchor_object_form_next_attr_is_also_redirected(tmp_path: Path):
+    analyzer = load_analyzer()
+    write_json(
+        tmp_path / "pipeline" / "main.json",
+        {
+            "CookNodeA": {"recognition": "DirectHit", "anchor": "Cooking"},
+            "Chef": {
+                "recognition": "DirectHit",
+                "next": [{"name": "Cooking", "anchor": True}],
+            },
+        },
+    )
+
+    result = analyzer.analyze_pipeline_files(tmp_path, [tmp_path / "pipeline" / "main.json"])
+
+    edge_targets = {(edge["source"], edge["target"]) for edge in result["edges"]}
+    assert ("Chef", "CookNodeA") in edge_targets
+    assert result["unresolved_refs"] == []
+
+
+def test_anchor_object_form_explicit_target_and_dangling_target(tmp_path: Path):
+    analyzer = load_analyzer()
+    write_json(
+        tmp_path / "pipeline" / "main.json",
+        {
+            "Kitchen": {
+                "recognition": "DirectHit",
+                "anchor": {"Cooking": "CookNodeA", "Ghost": "MissingTarget"},
+            },
+            "CookNodeA": {"recognition": "DirectHit"},
+            "Chef": {
+                "recognition": "DirectHit",
+                "next": ["[Anchor]Cooking", "[Anchor]Ghost"],
+            },
+        },
+    )
+
+    result = analyzer.analyze_pipeline_files(tmp_path, [tmp_path / "pipeline" / "main.json"])
+
+    edge_targets = {(edge["source"], edge["target"]) for edge in result["edges"]}
+    assert ("Chef", "CookNodeA") in edge_targets
+    assert not any(target == "MissingTarget" for _, target in edge_targets)
+    # "Ghost" IS declared (it just points at a missing node), so it must not
+    # show up as an undeclared anchor reference.
+    assert result["unresolved_anchor_refs"] == []
+    assert "MissingTarget" not in result["unresolved_refs"]
+    assert result["dangling_anchor_targets"] == [
+        {"anchor": "Ghost", "target": "MissingTarget", "file": "pipeline/main.json"}
+    ]
+
+
+def test_anchor_object_form_clear_declares_name_without_target(tmp_path: Path):
+    analyzer = load_analyzer()
+    write_json(
+        tmp_path / "pipeline" / "main.json",
+        {
+            "Kitchen": {"recognition": "DirectHit", "anchor": {"Cooking": ""}},
+            "Chef": {"recognition": "DirectHit", "next": ["[Anchor]Cooking"]},
+        },
+    )
+
+    result = analyzer.analyze_pipeline_files(tmp_path, [tmp_path / "pipeline" / "main.json"])
+
+    assert "Cooking" in result["anchor_names"]
+    # The name is declared (just currently cleared), so referencing it is
+    # neither an undeclared anchor reference nor a dangling target -- it
+    # simply resolves to no edge at all.
+    assert result["unresolved_anchor_refs"] == []
+    assert result["dangling_anchor_targets"] == []
+    assert result["edges"] == []
+
+
+def test_anchor_undeclared_name_is_reported_as_dangling_reference(tmp_path: Path):
+    analyzer = load_analyzer()
+    write_json(
+        tmp_path / "pipeline" / "main.json",
+        {"Chef": {"recognition": "DirectHit", "next": ["[Anchor]NeverDeclared"]}},
+    )
+
+    result = analyzer.analyze_pipeline_files(tmp_path, [tmp_path / "pipeline" / "main.json"])
+
+    assert result["unresolved_anchor_refs"] == ["NeverDeclared"]
+    assert "NeverDeclared" not in result["unresolved_refs"]
+    assert result["edges"] == []
+
+
+def test_anchor_resolution_removes_node_from_orphan_candidates(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "AnchorProject"
+    write_json(
+        root / "interface.json",
+        {
+            "resource": [{"name": "default", "path": ["./resource/base"]}],
+            "task": [{"name": "Entry", "entry": "Chef"}],
+        },
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "Chef": {"recognition": "DirectHit", "next": ["[Anchor]Cooking"]},
+            "CookNodeA": {"recognition": "DirectHit", "anchor": "Cooking"},
+        },
+    )
+
+    result = analyzer.analyze_project(root)
+    pipeline = result["pipeline"]
+
+    assert "CookNodeA" not in pipeline["orphan_candidates"]
+    assert "CookNodeA" not in pipeline["zero_in_degree_nodes"]
+    assert "CookNodeA" not in pipeline["isolated_nodes"]
+
+
+def test_analyze_project_labels_cross_bundle_override_separately(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "OverrideProject"
+    write_json(
+        root / "interface.json",
+        {
+            "resource": [
+                {"name": "base", "path": ["./resource/base"]},
+                {"name": "channel", "path": ["./resource/channel"]},
+            ],
+            "task": [{"name": "Entry", "entry": "BaseOnly"}],
+        },
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {
+            "BaseOnly": {"recognition": "DirectHit"},
+            "SharedNode": {"recognition": "DirectHit", "next": ["BaseOnly"]},
+        },
+    )
+    write_json(
+        root / "resource" / "channel" / "pipeline" / "main.json",
+        {
+            "SharedNode": {"recognition": "OCR", "expected": ["Channel"]},
+        },
+    )
+
+    pipeline = analyzer.analyze_project(root)["pipeline"]
+
+    assert pipeline["duplicate_nodes"] == []
+    assert pipeline["cross_bundle_override_nodes"] == ["SharedNode"]
+
+
+def test_analyze_pipeline_files_flags_same_bundle_duplicate_only(tmp_path: Path):
+    analyzer = load_analyzer()
+    base = tmp_path / "resource" / "base"
+    first = base / "pipeline" / "main.json"
+    second = base / "pipeline" / "override.json"
+    write_json(first, {"SharedNode": {"recognition": "DirectHit"}})
+    write_json(second, {"SharedNode": {"recognition": "OCR", "expected": ["Base"]}})
+
+    pipeline = analyzer.analyze_pipeline_files(
+        tmp_path,
+        [first, second],
+        [base],
+        {str(base): "base"},
+    )
+
+    assert pipeline["duplicate_nodes"] == ["SharedNode"]
+    assert pipeline["cross_bundle_override_nodes"] == []
+
+
+# ---------------------------------------------------------------------------
+# Windows console encoding + async visitor typing (issue #8 minor extras)
+# ---------------------------------------------------------------------------
+
+
+def test_main_handles_non_ascii_node_names_without_unicode_error(tmp_path: Path, capsys):
+    analyzer = load_analyzer()
+    root = tmp_path / "NonAsciiProject"
+    write_json(
+        root / "interface.json",
+        {"resource": [{"name": "default", "path": ["./resource/base"]}]},
+    )
+    write_json(
+        root / "resource" / "base" / "pipeline" / "main.json",
+        {"烹饪": {"recognition": "DirectHit"}},
+    )
+
+    exit_code = analyzer.main([str(root), "--json"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "烹饪" in captured.out
+
+
+def test_python_pipeline_calls_are_collected_from_async_functions(tmp_path: Path):
+    analyzer = load_analyzer()
+    root = tmp_path / "AsyncAgentProject"
+    agent = root / "agent" / "async_action.py"
+    agent.parent.mkdir(parents=True, exist_ok=True)
+    agent.write_text(
+        "async def run(context):\n"
+        "    await context.run_task('AsyncTarget')\n",
+        encoding="utf-8",
+    )
+
+    result = analyzer.analyze_python_pipeline_calls(root)
+
+    assert result["targets"] == ["AsyncTarget"]

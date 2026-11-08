@@ -1,0 +1,18 @@
+{
+  "id": "KhazixW2/maa-diagnose",
+  "title": "Maa Diagnose",
+  "description": "Read-only MaaFramework failure diagnosis that drives the external MaaEvidenceKit runtime and returns normalized evidence with one bounded failure owner.",
+  "author": "KhazixW2",
+  "source": "MaaHub",
+  "sourceGithub": "https://github.com/MaaXYZ/MaaHub",
+  "tags": ["diagnostics", "evidence", "logs", "skill"],
+  "createdAt": "2026-08-28",
+  "updatedAt": "2026-08-28",
+  "version": "0.1.0",
+  "mfwVersion": "5.10.4",
+  "entry": "../../../skills/maa-diagnose/SKILL.md",
+  "readme": "../../../docs/skills/maa-diagnose.md",
+  "status": "beta",
+  "type": "skill",
+  "category": "diagnostics"
+}

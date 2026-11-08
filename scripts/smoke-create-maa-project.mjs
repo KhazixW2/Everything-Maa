@@ -3,13 +3,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const PACKAGE_SPEC = "create-maa-project==2.0.0";
-const BASE_ARGS = ["--from", PACKAGE_SPEC, "create-maa-project"];
+const BASE_ARGS = ["--upgrade", "--from", "create-maa-project", "create-maa-project"];
+const ENVIRONMENT = {
+  ...process.env,
+};
 
 function runReport(args, cwd, allowedStatuses = [0]) {
   const result = spawnSync("uvx", [...BASE_ARGS, ...args], {
     cwd,
     encoding: "utf8",
+    env: ENVIRONMENT,
   });
   if (result.error) throw result.error;
   if (!allowedStatuses.includes(result.status)) {
@@ -28,6 +31,7 @@ function listMcpTools(cwd) {
   return new Promise((resolve, reject) => {
     const child = spawn("uvx", [...BASE_ARGS, "--mcp"], {
       cwd,
+      env: ENVIRONMENT,
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
@@ -132,7 +136,7 @@ try {
   if (!create.ok || create.command !== "create") {
     throw new Error(`Unexpected create report: ${JSON.stringify(create)}`);
   }
-  for (const relative of ["interface.json", "maa-project.json", "maa-project.lock.json"]) {
+  for (const relative of ["interface.json", "maa-project.json", "package.json"]) {
     if (!fs.existsSync(path.join(target, relative))) {
       throw new Error(`Created project is missing ${relative}`);
     }
@@ -145,7 +149,15 @@ try {
 
   const tools = await listMcpTools(parent);
   const names = new Set(tools.map((tool) => tool.name));
-  for (const required of ["create_project", "doctor", "diff", "sync", "update", "add"]) {
+  for (const required of [
+    "get_project_context",
+    "create_project",
+    "doctor",
+    "sync",
+    "update",
+    "add",
+    "list_backups",
+  ]) {
     if (!names.has(required)) throw new Error(`MCP server is missing tool ${required}`);
   }
 

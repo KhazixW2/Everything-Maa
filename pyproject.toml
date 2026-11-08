@@ -1,3 +1,15 @@
+[project]
+name = "everything-maa"
+version = "0.1.1"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0,<10",
+    "PyYAML>=6.0,<7",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
@@ -8,3 +20,6 @@ source = ["skills"]
 
 [tool.coverage.report]
 show_missing = true
+
+[tool.uv]
+package = false

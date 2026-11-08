@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "0.1.1",
+  "version": "0.2.0",
   "releaseStatus": "prepared-not-published",
   "channels": {
     "npm": {
@@ -22,7 +22,7 @@
     },
     "maahub": {
       "adapterRoot": "adapters/maahub/skills",
-      "adapterCount": 10,
+      "adapterCount": 13,
       "status": "adapter-ready"
     },
     "github-release": {

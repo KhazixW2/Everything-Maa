@@ -10,7 +10,7 @@
       "name": "everything-maa",
       "description": "Create, inspect, author, test, and operate MaaFramework projects with focused skills and optional MCP servers.",
       "source": "./",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "author": {
         "name": "KhazixW2"
       },

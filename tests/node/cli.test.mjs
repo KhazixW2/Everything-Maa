@@ -36,6 +36,7 @@ function tempProject(t) {
 test("list reports all skills and MCP profiles", () => {
   const output = run(["list"], REPO_ROOT);
   assert.match(output, /maa-project-init/);
+  assert.match(output, /maa-wiki/);
   assert.match(output, /skills-only/);
   assert.match(output, /authoring: maa-mcp, create-maa-project/);
   assert.match(output, /full: maa-mcp, create-maa-project, playwright/);
@@ -76,11 +77,13 @@ test("Claude project install is idempotent, preserves unrelated MCP, and uninsta
     "maa-mcp",
   ]);
   assert.deepEqual(installedMcp.mcpServers["create-maa-project"].args, [
+    "--upgrade",
     "--from",
-    "create-maa-project==2.0.0",
+    "create-maa-project",
     "create-maa-project",
     "--mcp",
   ]);
+  assert.equal(installedMcp.mcpServers["create-maa-project"].env, undefined);
   assert.equal(installedMcp.mcpServers.playwright.args.at(-1), "--isolated");
 
   run(["uninstall", "--target", "claude"], root);
@@ -102,6 +105,7 @@ test("Codex project install uses a managed TOML block and preserves other config
   assert.match(installed, /# BEGIN EVERYTHING-MAA MCP/);
   assert.match(installed, /\[mcp_servers\.maa-mcp\]/);
   assert.match(installed, /\[mcp_servers\.create-maa-project\]/);
+  assert.doesNotMatch(installed, /CREATE_MAA_PROJECT_AUTO_UPDATE/);
   assert.match(installed, /@playwright\/mcp@0\.0\.78/);
 
   run(["uninstall", "--target", "codex"], root);
@@ -114,17 +118,6 @@ test("authoring profile installs project lifecycle MCP without Playwright", (t) 
   run(["install", "--target", "claude", "--profile", "authoring"], root);
   const document = JSON.parse(fs.readFileSync(path.join(root, ".mcp.json"), "utf8"));
   assert.deepEqual(Object.keys(document.mcpServers).sort(), ["create-maa-project", "maa-mcp"]);
-});
-
-test("doctor reports pinned MCP and optional CLI integrations", () => {
-  const result = spawnSync(process.execPath, [CLI, "doctor"], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  });
-  assert.ok([0, 1].includes(result.status), result.stderr);
-  const output = result.stdout;
-  assert.match(output, /create-maa-project@2\.0\.0/);
-  assert.match(output, /maafw-cli@0\.1\.6 \(experimental\)/);
 });
 
 test("uninstall preserves a locally modified skill and keeps recovery state", (t) => {

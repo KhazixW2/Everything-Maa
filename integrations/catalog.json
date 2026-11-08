@@ -13,8 +13,9 @@
       "cli": {
         "command": "uvx",
         "args": [
+          "--upgrade",
           "--from",
-          "create-maa-project==2.0.0",
+          "create-maa-project",
           "create-maa-project"
         ],
         "reportFlag": "--report"
@@ -46,6 +47,41 @@
         ],
         "jsonFlag": "--json"
       }
+    },
+    "maa-evidence-kit": {
+      "role": "diagnostic-runtime",
+      "description": "Use for read-only cross-tool MaaFramework failure diagnosis over local logs and project sources when the failure owner is unknown.",
+      "status": "external-optional",
+      "capabilities": [
+        "runtime-discovery",
+        "cross-tool-inspection",
+        "log-evidence",
+        "static-project-evidence",
+        "local-corpus-inventory",
+        "structured-json"
+      ],
+      "package": "maa-evidence-kit",
+      "version": "latest",
+      "versionPolicy": "latest",
+      "license": "MIT",
+      "upstream": "https://github.com/Windsland52/MaaEvidenceKit",
+      "readme": "https://raw.githubusercontent.com/Windsland52/MaaEvidenceKit/main/README.md",
+      "skillPath": "skills/maa-evidence/SKILL.md",
+      "formerName": "MaaDiagnosticExpert",
+      "executable": "maa-evidence",
+      "install": "on-demand-user-managed",
+      "cli": {
+        "command": "npx",
+        "args": [
+          "--yes",
+          "--package",
+          "maa-evidence-kit@latest",
+          "maa-evidence"
+        ],
+        "versionFlag": "--version",
+        "helpFlag": "--help"
+      },
+      "mcpSurface": "discover-from-help"
     },
     "playwright": {
       "role": "optional-web-runtime",

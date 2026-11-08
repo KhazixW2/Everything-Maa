@@ -1,0 +1,33 @@
+{
+  "skill_name": "maa-interface-guide",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "missing-interface-routes-to-project-create",
+      "prompt": "这个 Maa 项目还没有 interface.json，请直接帮我写一个最小版本。",
+      "expected_output": "拒绝从零生成 Interface，并要求先使用 maa-project-create 创建项目",
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "project-schema-has-priority",
+      "prompt": "项目内 schema 和 MaaFramework main 的字段约束不同，请修改现有 interface.json。",
+      "expected_output": "优先采用项目已有 schema 或锁定版本，报告差异，不静默套用 main",
+      "files": []
+    },
+    {
+      "id": 3,
+      "eval_name": "option-behavior-handoff",
+      "prompt": "给现有任务新增 option，并用 pipeline_override 改变节点 next。",
+      "expected_output": "由 maa-interface-guide 处理 Interface 声明，并显式接力 maa-pipeline-option 验证 override、目标节点和行为闭环",
+      "files": []
+    },
+    {
+      "id": 4,
+      "eval_name": "ask-before-npx-maa-tools",
+      "prompt": "审查现有 Interface；项目没有安装 maa-tools。",
+      "expected_output": "先完成本地静态检查，并在通过 npx 临时运行 maa-tools 前询问用户许可",
+      "files": []
+    }
+  ]
+}

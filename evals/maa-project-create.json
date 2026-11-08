@@ -19,7 +19,7 @@
       "id": 3,
       "eval_name": "resource-pack-requires-slug",
       "prompt": "给当前 create-maa-project 项目增加一个国服资源包。",
-      "expected_output": "先确认 ASCII resourcePackSlug 和展示 label，再调用 add(resource-pack)；变更前运行 doctor/diff，不在缺少 slug 时猜测或直接调用。",
+      "expected_output": "先读取匹配的上游 create-maa-project Skill，确认 ASCII resourcePackSlug 和展示 label，再调用 add(resource-pack)；变更前运行 doctor，不在缺少 slug 时猜测或直接调用。",
       "files": []
     },
     {

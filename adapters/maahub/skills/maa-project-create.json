@@ -1,7 +1,7 @@
 {
   "id": "KhazixW2/maa-project-create",
   "title": "Maa Project Create",
-  "description": "Create and maintain MaaFramework projects through the external create-maa-project lifecycle MCP or pinned CLI.",
+  "description": "Create and maintain MaaFramework projects through the external create-maa-project lifecycle MCP or latest CLI.",
   "author": "KhazixW2",
   "source": "Everything Maa",
   "sourceGithub": "https://github.com/KhazixW2/Everything-Maa",

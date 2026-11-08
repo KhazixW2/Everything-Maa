@@ -16,6 +16,7 @@ def test_workflow_build_owns_the_end_to_end_control_loop():
     for phase in (
         "SPECIFY",
         "DISCOVER",
+        "EXPLORE",
         "DESIGN",
         "IMPLEMENT",
         "VERIFY",
@@ -36,7 +37,7 @@ def test_workflow_build_owns_the_end_to_end_control_loop():
     assert "Do not declare completion" in text
     assert "references/task-contract.md" in text
     assert "references/run-state.md" in text
-    assert "references/exploration-protocol.md" in text
+    assert "references/exploration-first.md" in text
     assert "references/acceptance-protocol.md" in text
     assert "references/recovery-policy.md" in text
 
@@ -86,15 +87,11 @@ def test_workflow_contracts_define_state_feedback_and_exit_conditions():
     recovery = (SKILL_DIR / "references" / "recovery-policy.md").read_text(
         encoding="utf-8"
     )
-    exploration = (SKILL_DIR / "references" / "exploration-protocol.md").read_text(
-        encoding="utf-8"
-    )
 
     for field in (
         "goal",
         "start_states",
         "success_states",
-        "transitions",
         "constraints",
         "acceptance_criteria",
     ):
@@ -114,49 +111,73 @@ def test_workflow_contracts_define_state_feedback_and_exit_conditions():
     assert "root cause" in recovery
     assert "safe retry" in recovery
     assert "stop condition" in recovery
-    assert "evidence_status: observed | source-backed | assumed | unknown" in task_contract
-    assert "action_target_evidence_status" in task_contract
-    assert "action_target_evidence_artifact" in task_contract
-    assert "A source path can support only `source-backed`" in task_contract
-    assert task_contract.count("or current source path for source-backed") >= 3
-    assert "never defer a `required: true` UI fact" in task_contract
-    assert "mode: standard | exploration-first" in run_state
-    assert "design_gate: not-required | blocked | pass" in run_state
-    assert "state_before -> observation -> guarded_action -> state_after" in exploration
-    assert "set `exploration_required: false`" in exploration
-    assert "set `mode: standard`" in exploration
-    assert "set `phase: DESIGN`" in exploration
 
 
-def test_unobserved_ui_forces_exploration_before_design_or_implementation():
+def test_guessed_states_open_an_exploration_gate_before_design():
     text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-    exploration = (SKILL_DIR / "references" / "exploration-protocol.md").read_text(
+    contract = (SKILL_DIR / "references" / "task-contract.md").read_text(
+        encoding="utf-8"
+    )
+    run_state = (SKILL_DIR / "references" / "run-state.md").read_text(encoding="utf-8")
+
+    assert "### 3. EXPLORE" in text
+    assert "### 4. DESIGN" in text
+    assert "Enter DESIGN only when the exploration gate is closed" in text
+    assert "evidence_status: observed" in text
+    assert "evidence_status: guessed" in text
+    assert "Do not write Pipeline nodes, CustomAction code, or a full implementation plan" in text
+    assert "Never write a node first and match it to the UI afterwards." in text
+
+    assert "evidence_status: observed | guessed" in contract
+    assert "evidence_artifact" in contract
+    assert "opens the exploration gate" in contract
+    assert "entry precondition of every reused node" in contract
+
+    # The gate only considers states the contract marks `required`, so the
+    # contract has to define that marker for every start and success state.
+    assert "required: true | false" in contract
+    assert contract.count("required: true | false") >= 2
+    assert "The exploration gate only considers required states" in contract
+
+    assert "EXPLORE" in run_state
+    assert "exploration:" in run_state
+    assert "gate: open | closed" in run_state
+    assert "round_trip_complete" in run_state
+    assert "observed_transitions" in run_state
+    assert "unreachable_states" in run_state
+
+
+def test_exploration_first_reference_defines_a_checkable_round_trip():
+    exploration = (SKILL_DIR / "references" / "exploration-first.md").read_text(
+        encoding="utf-8"
+    )
+    acceptance = (SKILL_DIR / "references" / "acceptance-protocol.md").read_text(
+        encoding="utf-8"
+    )
+    recovery = (SKILL_DIR / "references" / "recovery-policy.md").read_text(
         encoding="utf-8"
     )
 
-    assert "set the run state to `mode: exploration-first`" in text
-    assert "remain in `DISCOVER`" in text
-    assert "Enter `DESIGN` only" in text
-    assert "Do not write deliverable Pipeline nodes or a full CustomAction" in text
-    assert "Observe-act-observe loop" in exploration
-    assert "never chain blind clicks" in exploration
-    assert "design_gate: pass" in exploration
+    assert "at least one complete round-trip" in exploration
+    for required in (
+        "screencap",
+        "ocr",
+        "click",
+        "exit criteria",
+        "Reused components have preconditions",
+        "When exploration cannot run",
+    ):
+        assert required.lower() in exploration.lower(), required
 
+    assert "write or edit Pipeline nodes" in exploration
+    assert "write CustomAction or CustomRecognition code" in exploration
+    assert "stay `guessed`" in exploration
 
-def test_exploration_uses_recognition_relative_clicks_with_evidence_bound_exceptions():
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-    exploration = (SKILL_DIR / "references" / "exploration-protocol.md").read_text(
-        encoding="utf-8"
-    )
+    assert "exploration-trace" in acceptance
+    assert "no criterion depends on a state that is still `evidence_status: guessed`" in acceptance
 
-    for content in (text, exploration):
-        assert "OCR" in content
-        assert "TemplateMatch" in content
-        assert "target_offset" in content
-
-    assert "omit `target` and `target_offset`" in exploration
-    assert "evidence-required exception" in exploration
-    assert "Do not invent a `run_pipeline` ROI parameter" in exploration
+    assert "Unexplored-scene or assumed-precondition failure" in recovery
+    assert "`EXPLORE` in `$maa-workflow-build`" in recovery
 
 
 def test_workflow_build_metadata_adapter_docs_and_evals_are_discoverable():
@@ -193,26 +214,27 @@ def test_workflow_build_metadata_adapter_docs_and_evals_are_discoverable():
     exploration_eval = next(
         case
         for case in evals["evals"]
-        if case["eval_name"] == "explore-unknown-ui-before-design"
+        if case["eval_name"] == "explore-unknown-scene-before-planning"
     )
+    assert "exploration-first" in exploration_eval["expected_output"]
+    assert "round-trip" in exploration_eval["expected_output"]
+
     observed_eval = next(
         case
         for case in evals["evals"]
         if case["eval_name"] == "enter-design-with-observed-ui-trace"
     )
+    assert "关闭 exploration 闸门" in observed_eval["expected_output"]
+    assert "不重复强制探索" in observed_eval["expected_output"]
+
     authority_eval = next(
         case
         for case in evals["evals"]
         if case["eval_name"] == "do-not-infer-dangerous-exploration-authority"
     )
-    assert "exploration-first" in exploration_eval["expected_output"]
-    assert "不写正式 Pipeline 或完整 CustomAction" in exploration_eval["expected_output"]
-    assert "design_gate: pass" in observed_eval["expected_output"]
-    assert "exploration_required: false" in observed_eval["expected_output"]
-    assert "mode: standard" in observed_eval["expected_output"]
-    assert "不重复强制探索" in observed_eval["expected_output"]
     assert "不等于授权在探索时实际触发这些副作用" in authority_eval["expected_output"]
     assert "non-mutating probe" in authority_eval["expected_output"]
+
     assert (ROOT / "docs" / "skills" / "maa-workflow-build.md").is_file()
 
 
@@ -224,6 +246,9 @@ def test_workflow_build_docs_show_the_non_linear_specialist_loop():
     assert "flowchart TD" in docs
     assert "guide 不是执行阶段" in docs
     assert "负责整体组装" in docs
+    assert "EXPLORE" in docs
+    assert "round-trip" in docs
+    assert "evidence_status" in docs
 
 
 def test_specialist_skills_route_uncompiled_end_to_end_requests_to_workflow_build():

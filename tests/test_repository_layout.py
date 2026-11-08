@@ -85,11 +85,18 @@ def test_plugin_versions_and_mcp_presets_stay_in_sync():
     native_mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
 
     assert package["version"] == claude["version"] == codex["version"]
-    expected_servers = {
-        name: {
-            "command": catalog["servers"][name]["command"],
-            "args": catalog["servers"][name]["args"],
+
+    def expected_server(server):
+        expected = {
+            "command": server["command"],
+            "args": server["args"],
         }
+        if "env" in server:
+            expected["env"] = server["env"]
+        return expected
+
+    expected_servers = {
+        name: expected_server(catalog["servers"][name])
         for name in catalog["profiles"]["full"]
     }
     assert native_mcp["mcpServers"] == expected_servers

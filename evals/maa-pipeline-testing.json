@@ -21,6 +21,13 @@
       "prompt": "测试一个受开关控制的神殿识别节点：关闭时不可调用，同时怪物浮岛分支必须仍然执行。",
       "expected_output": "覆盖关闭不调用、开启未命中继续同级分支、开启命中只处理神殿三种情况，并避免危险点击",
       "files": []
+    },
+    {
+      "id": 4,
+      "eval_name": "focused-recognition-failure-stays-with-generate",
+      "prompt": "刚才那个 OCR 节点 expected 写的是英文 key，中文资源下识别不到。要不要先跑一遍 maa-diagnose 的完整诊断？",
+      "expected_output": "不触发广义诊断：测试证据已把失败归属到识别节点本身，直接交回 $maa-pipeline-generate 修正 expected/roi 并重跑聚焦测试；说明 $maa-diagnose 只在失败已发生且聚焦测试仍无法归属责任方时，由 $maa-workflow-build 的 RECOVER 调用。",
+      "files": []
     }
   ]
 }

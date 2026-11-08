@@ -1,0 +1,18 @@
+{
+  "id": "KhazixW2/maa-interface-guide",
+  "title": "Maa Interface Guide",
+  "description": "审查、诊断和修改已有的 MaaFramework Project Interface V2，并验证跨文件引用与资源组合。",
+  "author": "Craun718",
+  "source": "MaaHub",
+  "sourceGithub": "https://github.com/MaaXYZ/MaaHub",
+  "tags": ["interface", "project-interface", "validation", "skill"],
+  "createdAt": "2026-08-12",
+  "updatedAt": "2026-08-12",
+  "version": "0.1.0",
+  "mfwVersion": "5.10.4",
+  "entry": "../../../skills/maa-interface-guide/SKILL.md",
+  "readme": "../../../docs/skills/maa-interface-guide.md",
+  "status": "beta",
+  "type": "skill",
+  "category": "project"
+}

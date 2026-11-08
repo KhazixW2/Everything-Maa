@@ -1,0 +1,26 @@
+{
+  "skill_name": "maa-pipeline-generate",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "replace-directhit-hardcoded-target",
+      "prompt": "帮我加一个点击活动横幅的节点，横幅大概在屏幕下方中间，用 DirectHit 加 target [360, 900, 200, 80] 就行。",
+      "expected_output": "拒绝 DirectHit + 硬编码 target：说明该节点在任何画面上都会命中并点下去，且坐标会随模拟器分辨率/缩放偏移。横幅是非文字元素时改用 screencap 裁图存入该资源根的 image 目录 + TemplateMatch（template/roi/threshold），有稳定文案时用 OCR + expected；两种写法都不写 target，由 MaaFramework 点击识别框中心，并在点击后用 next 验证下一屏。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "replace-hardcoded-target-offset",
+      "prompt": "这个节点 OCR 识别到难度文字了，再加个 target_offset [270, 0, 0, 0] 把点击挪到右边的确定按钮上。",
+      "expected_output": "指出识别命中不等于点对位置：写死的偏移量只在当前设备和当前 UI 版本成立。优先直接识别「确定」本身（窄 ROI 的 OCR，或按钮图案的 TemplateMatch），用不重叠的 ROI 区分同名按钮；只有目标既无稳定文字也无稳定图案时才保留偏移，且必须锚定在识别结果上、写明偏移量的实测来源，并在点击后截图确认落点。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "eval_name": "explore-before-generating-nodes",
+      "prompt": "新活动的界面我没看过，你先把这一串节点的 ROI 和 expected 都生成出来，之后我再对着改。",
+      "expected_output": "不凭猜测生成 ROI 与 expected：先回到 $maa-workflow-build 的 EXPLORE 阶段，用 ocr()/screencap 实测每个页面拿到文本与 box，再据此生成节点；说明 ocr() 已包含截图不必先调 screencap，ROI 由实测 box 扩边得到，expected 必须是当前资源实际显示的文案。",
+      "files": []
+    }
+  ]
+}

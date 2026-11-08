@@ -54,8 +54,25 @@ function checkIntegrations() {
     }
     const metadata = tool.mcpServer ? mcp.servers[tool.mcpServer] : tool;
     if (tool.cli) {
-      const pin = `${metadata.package}==${metadata.version}`;
-      if (!tool.cli.args.includes(pin)) fail(`integration ${name} CLI does not pin ${pin}`);
+      if (metadata.version === "latest") {
+        const packageFlag = tool.cli.command === "npx" ? "--package" : "--from";
+        const packageIndex = tool.cli.args.indexOf(packageFlag);
+        const expectedPackage = tool.cli.command === "npx"
+          ? `${metadata.package}@latest`
+          : metadata.package;
+        const freshnessFlag = tool.cli.command === "npx" ? "--yes" : "--upgrade";
+        const resolvesLatest = (
+          tool.cli.args.includes(freshnessFlag) &&
+          packageIndex >= 0 &&
+          tool.cli.args[packageIndex + 1] === expectedPackage
+        );
+        if (!resolvesLatest) fail(`integration ${name} CLI does not resolve ${metadata.package}@latest`);
+      } else {
+        const pin = tool.cli.command === "npx"
+          ? `${metadata.package}@${metadata.version}`
+          : `${metadata.package}==${metadata.version}`;
+        if (!tool.cli.args.includes(pin)) fail(`integration ${name} CLI does not pin ${pin}`);
+      }
     }
     if (metadata.package && (!notices.includes(metadata.package) || !notices.includes(metadata.version))) {
       fail(`THIRD_PARTY_NOTICES.md is missing ${metadata.package}@${metadata.version}`);

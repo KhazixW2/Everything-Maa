@@ -21,7 +21,7 @@
       "package": "maa-mcp",
       "version": "1.2.3",
       "license": "AGPL-3.0-or-later",
-      "upstream": "https://github.com/MaaXYZ/MaaMCP",
+      "upstream": "https://github.com/MAA-AI/MaaMCP",
       "command": "uvx",
       "args": [
         "--from",
@@ -32,13 +32,14 @@
     "create-maa-project": {
       "description": "Create, update, diagnose, and release MaaFramework application projects.",
       "package": "create-maa-project",
-      "version": "2.0.0",
+      "version": "latest",
       "license": "AGPL-3.0-or-later",
       "upstream": "https://github.com/Windsland52/create-maa-project",
       "command": "uvx",
       "args": [
+        "--upgrade",
         "--from",
-        "create-maa-project==2.0.0",
+        "create-maa-project",
         "create-maa-project",
         "--mcp"
       ]

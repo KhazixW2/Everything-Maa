@@ -164,7 +164,9 @@ function selectedServers(profile, catalog) {
   return Object.fromEntries(
     catalog.profiles[profile].map((name) => {
       const server = catalog.servers[name];
-      return [name, { command: server.command, args: server.args }];
+      const expected = { command: server.command, args: server.args };
+      if (server.env) expected.env = server.env;
+      return [name, expected];
     }),
   );
 }
@@ -255,6 +257,12 @@ function tomlString(value) {
   return JSON.stringify(value);
 }
 
+function tomlEnvEntries(env) {
+  return Object.entries(env).map(
+    ([key, value]) => `${tomlString(key)} = ${tomlString(value)}`,
+  );
+}
+
 function renderCodexBlock(servers) {
   const chunks = [MANAGED_BEGIN];
   for (const [name, server] of Object.entries(servers)) {
@@ -262,6 +270,9 @@ function renderCodexBlock(servers) {
       `[mcp_servers.${name}]`,
       `command = ${tomlString(server.command)}`,
       `args = [${server.args.map(tomlString).join(", ")}]`,
+      ...(server.env
+        ? [`env = { ${tomlEnvEntries(server.env).join(", ")} }`]
+        : []),
       "",
     );
   }
@@ -479,7 +490,10 @@ function doctor(catalog, integrations) {
     checkCommand("Node.js", process.execPath),
     checkCommand("Python", process.platform === "win32" ? "python" : "python3"),
     checkCommand("uvx (required by Maa MCP integrations)", "uvx"),
-    checkCommand("npx (required by Playwright MCP)", process.platform === "win32" ? "npx.cmd" : "npx"),
+    checkCommand(
+      "npx (required by Playwright MCP and MaaEvidenceKit)",
+      process.platform === "win32" ? "npx.cmd" : "npx",
+    ),
   ];
   console.log("Configured integrations:");
   for (const [name, tool] of Object.entries(integrations.tools)) {
@@ -487,7 +501,13 @@ function doctor(catalog, integrations) {
       const server = catalog.servers[tool.mcpServer];
       console.log(`  [mcp] ${name}: ${server.package}@${server.version}`);
     } else if (tool.cli) {
-      console.log(`  [optional cli] ${name}: ${tool.package}@${tool.version} (${tool.status || "stable"})`);
+      console.log(
+        `  [optional cli] ${name}: ${tool.package}@${tool.version} (${tool.status || "stable"}, ${tool.install || "on-demand"})`,
+      );
+    } else if (tool.package) {
+      console.log(
+        `  [external runtime] ${name}: ${tool.package}@${tool.version} (${tool.status || "stable"}, ${tool.install || "user-managed"})`,
+      );
     }
   }
   if (!checks.every(Boolean)) process.exitCode = 1;

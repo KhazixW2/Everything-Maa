@@ -31,12 +31,13 @@ Trusted publishing requires a public GitHub-hosted workflow with OIDC. The relea
    - `.claude-plugin/plugin.json`;
    - `.claude-plugin/marketplace.json`;
    - `distribution/catalog.json`.
-3. Review pinned third-party versions and licenses in `mcp/catalog.json`, `integrations/catalog.json`, and `THIRD_PARTY_NOTICES.md`.
+3. Review third-party version policies and licenses in `mcp/catalog.json`, `integrations/catalog.json`, and `THIRD_PARTY_NOTICES.md`; create-maa-project and MaaEvidenceKit track latest.
 4. Run:
 
 ```bash
-python -m pytest
-python scripts/validate_skills.py
+uv sync
+uv run python -m pytest
+uv run python scripts/validate_skills.py
 npm test
 npm run release:check
 npm run smoke:create-project

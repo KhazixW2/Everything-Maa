@@ -1,7 +1,7 @@
 {
   "name": "everything-maa",
   "version": "0.2.0",
-  "description": "Install MaaFramework lifecycle skills and versioned MCP profiles for Claude Code and Codex.",
+  "description": "为 Claude Code 与 Codex 安装 MaaFramework 生命周期 skills 和版本化 MCP profiles。",
   "type": "module",
   "bin": {
     "everything-maa": "packages/cli/bin/everything-maa.js"
@@ -27,7 +27,7 @@
     "CONTRIBUTING.md",
     "LICENSE",
     "README.md",
-    "README.zh-CN.md",
+    "README.en.md",
     "SECURITY.md",
     "THIRD_PARTY_NOTICES.md"
   ],

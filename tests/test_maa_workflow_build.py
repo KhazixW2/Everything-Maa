@@ -133,6 +133,12 @@ def test_guessed_states_open_an_exploration_gate_before_design():
     assert "opens the exploration gate" in contract
     assert "entry precondition of every reused node" in contract
 
+    # The gate only considers states the contract marks `required`, so the
+    # contract has to define that marker for every start and success state.
+    assert "required: true | false" in contract
+    assert contract.count("required: true | false") >= 2
+    assert "The exploration gate only considers required states" in contract
+
     assert "EXPLORE" in run_state
     assert "exploration:" in run_state
     assert "gate: open | closed" in run_state
@@ -212,6 +218,23 @@ def test_workflow_build_metadata_adapter_docs_and_evals_are_discoverable():
     )
     assert "exploration-first" in exploration_eval["expected_output"]
     assert "round-trip" in exploration_eval["expected_output"]
+
+    observed_eval = next(
+        case
+        for case in evals["evals"]
+        if case["eval_name"] == "enter-design-with-observed-ui-trace"
+    )
+    assert "关闭 exploration 闸门" in observed_eval["expected_output"]
+    assert "不重复强制探索" in observed_eval["expected_output"]
+
+    authority_eval = next(
+        case
+        for case in evals["evals"]
+        if case["eval_name"] == "do-not-infer-dangerous-exploration-authority"
+    )
+    assert "不等于授权在探索时实际触发这些副作用" in authority_eval["expected_output"]
+    assert "non-mutating probe" in authority_eval["expected_output"]
+
     assert (ROOT / "docs" / "skills" / "maa-workflow-build.md").is_file()
 
 

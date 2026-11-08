@@ -74,8 +74,8 @@ def test_interface_guide_metadata_adapter_and_evals_are_discoverable():
 
 
 def test_interface_guide_documents_maa_tools_in_readmes():
-    english = (ROOT / "README.md").read_text(encoding="utf-8")
-    chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+    english = (ROOT / "README.en.md").read_text(encoding="utf-8")
+    chinese = (ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "@nekosu/maa-tools" in english
     assert "@nekosu/maa-tools" in chinese

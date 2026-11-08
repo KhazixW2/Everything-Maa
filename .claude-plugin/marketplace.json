@@ -1,14 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "everything-maa",
-  "description": "MaaFramework project lifecycle skills and versioned runtime integrations.",
+  "description": "MaaFramework 项目生命周期 skills 与版本化运行时集成。",
   "owner": {
     "name": "KhazixW2"
   },
   "plugins": [
     {
       "name": "everything-maa",
-      "description": "Create, inspect, author, test, and operate MaaFramework projects with focused skills and optional MCP servers.",
+      "description": "用专注的 skills 与可选的 MCP 服务创建、检查、编写、测试和运维 MaaFramework 项目。",
       "source": "./",
       "version": "0.2.0",
       "author": {

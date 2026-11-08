@@ -97,7 +97,7 @@ function inspectTarball() {
     "LICENSE",
     "CHANGELOG.md",
     "README.md",
-    "README.zh-CN.md",
+    "README.en.md",
     "package.json",
     "packages/cli/bin/everything-maa.js",
     "integrations/catalog.json",

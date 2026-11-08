@@ -1,7 +1,7 @@
 {
   "name": "everything-maa",
   "version": "0.2.0",
-  "description": "MaaFramework lifecycle and CLI skills with MaaMCP and optional browser integrations.",
+  "description": "MaaFramework 生命周期与 CLI skills，配套 MaaMCP 及可选的浏览器集成。",
   "author": {
     "name": "KhazixW2"
   },

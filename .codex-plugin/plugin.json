@@ -1,7 +1,7 @@
 {
   "name": "everything-maa",
   "version": "0.2.0",
-  "description": "MaaFramework lifecycle and CLI skills with MaaMCP and optional browser integrations.",
+  "description": "MaaFramework 生命周期与 CLI skills，配套 MaaMCP 及可选的浏览器集成。",
   "author": {
     "name": "KhazixW2"
   },
@@ -17,15 +17,15 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Everything Maa",
-    "shortDescription": "Build and maintain MaaFramework projects.",
-    "longDescription": "Focused MaaFramework skills for end-to-end workflow orchestration, project creation, CLI operation, Pipeline authoring, generation, options, testing, read-only failure diagnosis, graph analysis, project discovery, and history auditing, with create-maa-project, MaaMCP, and optional Playwright MCP servers.",
+    "shortDescription": "构建与维护 MaaFramework 项目。",
+    "longDescription": "面向 MaaFramework 的专注 skills：端到端工作流编排、项目创建、CLI 操作、Pipeline 编写与生成、选项接线、测试、只读故障诊断、节点图谱分析、项目发现与历史审计，并接入 create-maa-project、MaaMCP 以及可选的 Playwright MCP 服务。",
     "developerName": "KhazixW2",
     "category": "Productivity",
     "capabilities": [
       "Interactive",
       "Write"
     ],
-    "defaultPrompt": "Use $maa-workflow-build to turn this Maa automation request into a verified end-to-end workflow."
+    "defaultPrompt": "使用 $maa-workflow-build 将这个 Maa 自动化需求转换为经过验证的端到端工作流。"
   },
   "mcpServers": "./.mcp.json"
 }

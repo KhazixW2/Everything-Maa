@@ -1,37 +1,39 @@
 # Everything Maa
 
-Everything Maa is a focused toolkit of reusable AI skills for MaaFramework projects. Its canonical content covers intent-to-workflow orchestration, project creation and discovery, Project Interface maintenance, Pipeline authoring and generation, option wiring, graph analysis, testing, history auditing, guarded CLI operation, and official Maa knowledge routing.
+> 文档语言：中文 | [English](README.en.md)
 
-> Status: published toolkit baseline. The canonical skills, native plugin manifests, MCP profiles, and installer are covered by local and CI checks; the npm package and GitHub repository are public.
+Everything Maa 是一个严格面向 MaaFramework 项目的 AI skills 工具集。核心范围包括从意图到工作流的编排、项目创建与发现、Project Interface 维护、Pipeline 编写与生成、选项接线、节点图谱、测试、历史审计、受控 CLI 操作和官方 Maa 知识路由。
 
-## Install
+> 当前状态：已发布基线。规范化 skills、原生插件清单、MCP profiles 和安装器都有本地与 CI 检查；npm 包与 GitHub 仓库已公开。
 
-Install into a project with one of these commands:
+## 安装
+
+可用下面任一命令安装到当前项目：
 
 ```bash
 npx everything-maa@latest install --target claude
 npx everything-maa@latest install --target codex
 ```
 
-For a local checkout, replace `npx everything-maa@latest` with `node packages/cli/bin/everything-maa.js`.
+在本地仓库试用时，将 `npx everything-maa@latest` 替换为 `node packages/cli/bin/everything-maa.js`。
 
-Claude Code can also install the native plugin through its self-hosted marketplace:
+Claude Code 也可以通过自托管 marketplace 安装原生插件：
 
 ```text
 /plugin marketplace add https://github.com/KhazixW2/Everything-Maa
 /plugin install everything-maa@everything-maa
 ```
 
-The default `core` profile installs all thirteen skills and configures MaaMCP. Profiles are explicit and versioned:
+默认 `core` profile 会安装全部 13 个 skills 并配置 MaaMCP。四个 profile 的边界是固定且版本化的：
 
-| Profile | Installed components |
+| Profile | 安装内容 |
 | --- | --- |
-| `skills-only` | Maa skills only |
+| `skills-only` | 仅 Maa skills |
 | `core` | Maa skills + MaaMCP |
-| `authoring` | Core + create-maa-project project lifecycle MCP |
-| `full` | Authoring + isolated Playwright MCP |
+| `authoring` | Core + create-maa-project 项目生命周期 MCP |
+| `full` | Authoring + 隔离模式 Playwright MCP |
 
-Useful operations:
+常用操作：
 
 ```bash
 npx everything-maa list
@@ -41,47 +43,47 @@ npx everything-maa install --target codex --profile full --dry-run
 npx everything-maa uninstall --target codex
 ```
 
-Project scope is the default. User-scope skill installation is available through `--scope user`; Claude user-scope MCP merging is intentionally excluded because it would require editing Claude's shared global configuration. Use `--profile skills-only`, project scope, or the native plugin in that case.
+默认安装到项目级。`--scope user` 可安装用户级 skills；Claude 用户级 MCP 合并暂不支持，因为这需要修改 Claude 的共享全局配置。该场景请选择 `--profile skills-only`、项目级安装或原生插件。
 
-The installer records exactly what it owns. Uninstall removes an installed skill only when its content still matches the recorded hash, preserves unrelated MCP entries, and leaves locally modified content in place with recovery state.
+安装器只管理自己写入的内容。卸载时仅删除哈希仍与安装记录一致的 skill，保留无关 MCP 配置，并保留用户修改过的内容与恢复状态。
 
-## Core skills
+## 核心 skills
 
-| Skill | Purpose |
+| Skill | 用途 |
 | --- | --- |
-| `maa-workflow-build` | Compile ambiguous automation requests into verified end-to-end Maa workflows. |
-| `maa-cli-operate` | Run repeatable device, recognition, action, and Pipeline operations through maafw-cli. |
-| `maa-project-create` | Create, extend, diagnose, and update Maa projects through create-maa-project. |
-| `maa-project-init` | Scan a Maa project and produce a reusable `basic_info.md` handoff. |
-| `maa-wiki` | Route MaaFramework knowledge questions and other Maa skills to authoritative official documentation, schemas, APIs, bindings, releases, and semantic changes. |
-| `maa-interface-guide` | Review, diagnose, and modify an existing Project Interface V2 with optional `@nekosu/maa-tools` validation. |
-| `maa-pipeline-guide` | Design and review MaaFramework Pipeline JSON. |
-| `maa-pipeline-generate` | Generate recognition/action nodes and sweep OCR ROIs. |
-| `maa-pipeline-option` | Wire runtime options across UI, Pipeline, and Python. |
-| `maa-pipeline-testing` | Validate resources, recognition, Custom wiring, and runtime flows. |
-| `maa-diagnose` | Load the authoritative MaaEvidenceKit guidance, then diagnose an unexplained failure read-only and return one bounded failure owner. |
-| `maa-pipeline-graph` | Map Pipeline state relationships and external Python entries. |
-| `maa-pipeline-history-audit` | Learn Pipeline and Custom conventions from Git history. |
+| `maa-workflow-build` | 将模糊自动化需求编译为可验证的端到端 Maa 工作流。 |
+| `maa-cli-operate` | 通过 maafw-cli 执行可重复的设备、识别、动作和 Pipeline 操作。 |
+| `maa-project-create` | 通过 create-maa-project 创建、扩展、诊断和更新 Maa 项目。 |
+| `maa-project-init` | 扫描 Maa 项目并生成可复用的 `basic_info.md` 接力文档。 |
+| `maa-wiki` | 将 MaaFramework 知识问题和其它 Maa skills 路由到权威官方文档、schema、API、binding、release 与语义变化。 |
+| `maa-interface-guide` | 审查、诊断和修改已有的 Project Interface V2，并可通过 `@nekosu/maa-tools` 校验。 |
+| `maa-pipeline-guide` | 设计、修改和审查 MaaFramework Pipeline JSON。 |
+| `maa-pipeline-generate` | 生成识别/动作节点并扫描 OCR ROI。 |
+| `maa-pipeline-option` | 贯通 UI、Pipeline 与 Python 的运行时选项。 |
+| `maa-pipeline-testing` | 验证资源、识别、Custom 映射和端到端流程。 |
+| `maa-diagnose` | 责任方未知时，加载权威 MaaEvidenceKit 指引，只读诊断失败并给出唯一失败责任方。 |
+| `maa-pipeline-graph` | 梳理 Pipeline 状态关系与 Python 外部入口。 |
+| `maa-pipeline-history-audit` | 从 Git 历史学习 Pipeline 与 Custom 约定。 |
 
-Project-specific workflows belong under `recipes/` and are not installed as core skills.
+项目专用工作流放在 `recipes/`，不作为核心 skills 默认安装。
 
-## Repository layout
+## 仓库结构
 
-- `skills/`: canonical Maa skills; each directory is independently installable.
-- `recipes/`: optional project or task recipes.
-- `evals/`: skill evaluation cases kept outside installed skill payloads.
-- `adapters/`: distribution metadata for MaaHub and future agent harnesses.
-- `distribution/`: versioned status and paths for every supported release channel.
-- `integrations/`: runtime routing metadata for MCP and optional CLI tools.
-- `mcp/`: versioned MCP server catalog and profiles.
-- `.claude-plugin/` and `.codex-plugin/`: native plugin manifests.
-- `packages/cli/`: dependency-free Node.js installer.
-- `tests/`: portable fixtures and repository invariants.
-- `.github/workflows/`: cross-platform CI and tag-gated trusted publishing.
+- `skills/`：规范化 Maa skills，每个目录可独立安装。
+- `recipes/`：可选的项目或任务配方。
+- `evals/`：与安装载荷分离的 skill 评测用例。
+- `adapters/`：MaaHub 及后续 agent 平台的分发元数据。
+- `distribution/`：所有支持发行渠道的版本化状态与路径。
+- `integrations/`：MCP 与可选 CLI 工具的运行时路由元数据。
+- `mcp/`：版本化 MCP 服务器目录与 profiles。
+- `.claude-plugin/` 与 `.codex-plugin/`：原生插件清单。
+- `packages/cli/`：无运行时依赖的 Node.js 安装器。
+- `tests/`：跨平台 fixture 和仓库结构约束。
+- `.github/workflows/`：跨平台 CI 与标签门控的可信发布流程。
 
-The completed six-phase roadmap and remaining public-release gate are documented in [docs/roadmap.md](docs/roadmap.md).
+已完成的六阶段路线图和剩余公开发布门槛见 [docs/roadmap.md](docs/roadmap.md)。
 
-## Development
+## 开发与验证
 
 ```bash
 uv sync
@@ -92,28 +94,28 @@ npm run release:check
 npm pack --dry-run
 ```
 
-When changing the create-maa-project integration, also run the networked upstream smoke test:
+修改 create-maa-project 集成时，还需运行连接上游发行包的冒烟测试：
 
 ```bash
 npm run smoke:create-project
 ```
 
-When changing the maafw-cli integration, run its non-device upstream contract smoke test:
+修改 maafw-cli 集成时，运行不连接设备的上游命令契约冒烟测试：
 
 ```bash
 npm run smoke:maafw-cli
 ```
 
-The current baseline supports Python 3.10 and later and Node.js 18 and later. Do not assume a skill is installed under `.claude/skills`, a particular drive letter, or the Everything Maa checkout itself.
+当前基线支持 Python 3.10 及以上、Node.js 18 及以上。skill 不得假设自己安装在 `.claude/skills`、固定盘符或 Everything Maa 源码目录中。
 
-## Scope and dependencies
+## 范围与依赖
 
-Everything Maa does not vendor create-maa-project, MaaEvidenceKit, MaaMCP, maafw-cli, Playwright MCP, MaaFramework binaries, OCR models, `@nekosu/maa-tools`, the MaaLLMWiki `maallmwiki` Skill, its catalog, or Project Interface V2 protocol snapshots. MCP and CLI launch contracts reference upstream packages; create-maa-project and MaaEvidenceKit track latest and hand off to the upstream README or integrated Skill. The `maa-wiki` skill hands off to the raw upstream `maallmwiki` Skill and does not download, cache, or copy that Skill or catalog content into installations; Interface and option guidance resolves protocol semantics through project evidence and pinned upstream documentation and schemas. MaaMCP, create-maa-project, and the experimental maafw-cli skill require `uvx`; Playwright MCP and `@nekosu/maa-tools` require `npx`. Maafw-cli runs on demand without persistent installation by a profile. When invoking MaaEvidenceKit, resolve `maa-evidence-kit@latest` on demand with `npx`; reject a stale `maa-evidence` executable from `PATH`.
+Everything Maa 不复制 create-maa-project、MaaEvidenceKit、MaaMCP、maafw-cli、Playwright MCP、MaaFramework 二进制、OCR 模型、`@nekosu/maa-tools`、MaaLLMWiki 的 `maallmwiki` Skill、catalog 或 Project Interface V2 协议快照。MCP 与 CLI 命令契约只调用上游发行包；create-maa-project 与 MaaEvidenceKit 跟踪 latest，并衔接上游 README 或集成 Skill。`maa-wiki` skill 衔接 raw GitHub URL 上的上游 `maallmwiki` Skill，不下载、缓存或复制该 Skill 和 catalog 内容到安装目录；Interface 与 option 指南通过项目证据和 pinned 上游文档/schema 解析协议语义。MaaMCP、create-maa-project 和实验性的 maafw-cli skill 需要 `uvx`，Playwright MCP 和 `@nekosu/maa-tools` 需要 `npx`；maafw-cli 仅按需运行，不由 profile 持久安装。调用 MaaEvidenceKit 时，通过 `npx` 按需解析 `maa-evidence-kit@latest`；不要回退到 `PATH` 中的旧 `maa-evidence` 可执行文件。
 
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for license boundaries and [README.zh-CN.md](README.zh-CN.md) for Chinese documentation.
+许可证边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)；英文文档见 [README.en.md](README.en.md)。
 
-## License
+## 许可证
 
-Everything Maa's own skills, scripts, tests, and documentation are released under the [MIT License](LICENSE). Third-party runtimes keep their upstream licenses.
+Everything Maa 自有的 skills、脚本、测试和文档使用 [MIT License](LICENSE)。第三方运行时继续遵守各自的上游许可证。
 
-Everything Maa is a community project and is not an official MaaFramework distribution unless explicitly stated otherwise.
+Everything Maa 是社区项目；除非另有明确说明，它不是 MaaFramework 官方发行版。

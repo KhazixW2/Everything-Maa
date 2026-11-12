@@ -13,7 +13,7 @@
 
 本仓库不维护 Project Interface V2 的字段矩阵、版本能力表或语义快照。需要上游依据时按以下流程发现并引用：
 
-1. 通过 `$maa-wiki` 读取 MaaLLMWiki 总入口，找到 Project Interface V2 文档和 `interface*.schema.json` 对应的入口。
+1. 通过 `$maa-wiki` 加载 MaaLLMWiki 上游 `maallmwiki` skill，找到 Project Interface V2 文档和 `interface*.schema.json` 对应的入口；仅当上游 skill 不可达时，按 `$maa-wiki` 的披露顺序用根 README 降级。
 2. 采用该入口记录的 pinned tag、commit 或 revision，回到 MaaFramework 官方仓库读取原始文档与 schema。
 3. 没有项目内证据时不要凭模型记忆补字段；找到的每个事实记录 URL 或 revision。
 4. MaaLLMWiki 路径不可达或 revision 不明确时，把相关 PI 语义标记为未验证，并继续完成可核实的项目文件检查。

@@ -74,8 +74,8 @@ def test_interface_guide_metadata_adapter_and_evals_are_discoverable():
 
 
 def test_interface_guide_documents_maa_tools_in_readmes():
-    english = (ROOT / "README.md").read_text(encoding="utf-8")
-    chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+    english = (ROOT / "README.en.md").read_text(encoding="utf-8")
+    chinese = (ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "@nekosu/maa-tools" in english
     assert "@nekosu/maa-tools" in chinese
@@ -105,6 +105,8 @@ def test_interface_guide_routes_protocol_semantics_to_external_sources():
     assert "## 协议来源发现" in review
     assert "不维护 Project Interface V2 的字段矩阵、版本能力表或语义快照" in review
     assert "$maa-wiki" in review
+    assert "MaaLLMWiki 上游 `maallmwiki` skill" in review
+    assert "按 `$maa-wiki` 的披露顺序用根 README 降级" in review
     assert "pinned tag、commit 或 revision" in review
     assert "不要把历史路径或本地引用写成永久协议来源" in review
     assert "pretask" in review

@@ -9,15 +9,18 @@ non_goals: []
 
 start_states:
   - id: stable-state-name
+    required: true | false
     evidence: how the state is recognized
     evidence_status: observed | guessed
     evidence_artifact: screenshot, capture id, or recognition trace
   - id: unknown-state
+    required: true | false
     evidence: unexpected or insufficient observation
     evidence_status: observed | guessed
 
 success_states:
   - id: completed-state
+    required: true | false
     evidence: observable postcondition
     evidence_status: observed | guessed
     evidence_artifact: screenshot, capture id, or recognition trace
@@ -49,6 +52,7 @@ acceptance_criteria:
 - Express the goal as a result, not an implementation choice.
 - Describe every start and success state using observable evidence.
 - Give every start and success state an `evidence_status`. Use `observed` only when a capture taken in this task shows the state and `evidence_artifact` names it; anything inferred is `guessed`.
+- Mark every start and success state `required: true` or `required: false`. The exploration gate only considers required states, so mark an optional or deferred state `required: false` and bound it as a safe stop, a user handoff, or later acceptance work instead of forcing exploration for it.
 - A required state that is still `guessed` opens the exploration gate. Explore before design; see [exploration-first.md](exploration-first.md).
 - Record the entry precondition of every reused node, processor, or CustomAction as its own state, and observe it like any other.
 - Include a no-op path when the requested action is unnecessary or disabled.
@@ -66,22 +70,28 @@ non_goals:
   - Spend premium currency.
 start_states:
   - id: original-task
+    required: true
     evidence: the task entry or its stable pre-action screen is recognized
     evidence_status: observed
     evidence_artifact: capture-01 main screen
   - id: stamina-insufficient-dialog
+    required: true
     evidence: the insufficient-stamina message is recognized
     evidence_status: observed
     evidence_artifact: capture-03 dialog
   - id: recovery-dialog
+    required: true
     evidence: the owned normal item and its use control are recognized
     evidence_status: observed
     evidence_artifact: capture-04 item list
   - id: unknown-state
+    required: true
     evidence: none of the supported stable states is recognized
     evidence_status: observed
+    evidence_artifact: capture-05 unrecognized screen trace
 success_states:
   - id: resumed
+    required: true
     evidence: stamina increased or the insufficient dialog disappeared, and the original task resumed
     evidence_status: observed
     evidence_artifact: capture-06 after item use

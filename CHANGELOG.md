@@ -7,7 +7,10 @@ All notable changes to Everything Maa will be documented in this file. The proje
 ### Changed
 
 - External runtime references now resolve latest by default when no version is specified. MaaMCP and maafw-cli use `uvx --upgrade`, while Playwright MCP and MaaEvidenceKit use npm's `@latest`; explicit fixed versions remain supported where the upstream package manager accepts them.
+- The repository homepage now defaults to Chinese documentation: `README.zh-CN.md` became `README.md` and the English README moved to `README.en.md`, so GitHub renders the Chinese README first and offers an English switch through its README language selector. Both READMEs also link to each other directly. npm, Claude plugin, Codex plugin, and marketplace metadata descriptions are now Chinese.
 - `maa-wiki` now loads MaaLLMWiki's authoritative `maallmwiki` Skill before catalog navigation and uses disclosed raw, jsDelivr, and README fallbacks while preserving pinned-source citation requirements.
+- `maa-wiki` now gives explicit version requests precedence, resolves target-project runtime and lock conflicts before choosing upstream defaults, and routes Interface protocol discovery through the upstream `maallmwiki` Skill with the root README only as a disclosed fallback.
+- `maa-workflow-build` task contracts now mark every start and success state `required: true` or `required: false`, matching the exploration gate rule that already referenced a required marker the contract did not define. Optional or deferred states can now be bounded as a safe stop, a user handoff, or later acceptance work instead of holding the gate open.
 
 ## [0.2.0] - 2026-10-06
 

@@ -70,6 +70,20 @@
       "prompt": "活动战斗直接调用现成的 AutoFightProcessor 就行了吧？它在别的任务里能跑通。",
       "expected_output": "把该处理器的入口前提当作一个必须被观测的状态：先确认它期望「已经在战斗中」，再探明从活动横幅到准备页、进入战斗、确认、战斗开始的整串 UI 入口，并把这些中间态记进 run state；未观测前不把它当作活动入口，也不据此写实现计划。",
       "files": []
+    },
+    {
+      "id": 11,
+      "eval_name": "enter-design-with-observed-ui-trace",
+      "prompt": "我提供了当前版本的 720p 截图和运行 trace，已经实测主界面→活动横幅→准备页→航海确认→战斗开始→稳定返回。请据此设计状态机。",
+      "expected_output": "先核对截图、locale、分辨率和 trace 能覆盖所有 required states 与稳定返回；证据满足时关闭 exploration 闸门并进入 DESIGN，不重复强制探索。可点击文字优先 OCR + Click 且省略 target/target_offset，非文字控件优先 TemplateMatch + Click；固定坐标或偏移只作为有当前证据并可聚焦验证的例外。",
+      "files": []
+    },
+    {
+      "id": 12,
+      "eval_name": "do-not-infer-dangerous-exploration-authority",
+      "prompt": "给这个会自动进入战斗并消耗活动次数的事件做一套完整流程，但我还没有提供页面路径。",
+      "expected_output": "生产流程的目标包含开战或消耗次数，不等于授权在探索时实际触发这些副作用。先把 side-effect boundaries 写入 task contract；只进行截图、OCR 或其他 non-mutating probe，在每个危险边界前停止。只有用户明确授权探索中的具体副作用且 pre-action state 已 observed 时才执行一次，并在动作后重新观察；否则保持 exploration 闸门打开并报告最小缺失证据。",
+      "files": []
     }
   ]
 }

@@ -38,7 +38,7 @@ def test_cli_reference_documents_latest_runtime_and_contract_terms():
         "maafw-cli",
         "maafw-cli",
     ]
-    assert "uvx --upgrade --from maafw-cli maafw-cli" in reference
+    assert "uvx --upgrade --from maafw-cli python" in reference
     assert "0.1.6" not in reference
     assert "--json" in reference
     assert "--size short:720" in reference

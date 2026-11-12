@@ -15,7 +15,7 @@ Use MaaMCP instead when the task benefits from a long-lived exploratory session,
 
 ## Prepare safely
 
-1. Resolve the latest runtime with `uvx --upgrade`, then run `--version` and report the version actually used. If the user explicitly requests a fixed version, replace the package spec with `maafw-cli==VERSION` and omit `--upgrade`.
+1. Resolve the latest package version once with `uvx --upgrade` as shown in the command reference, then use `uvx --from maafw-cli==VERSION maafw-cli` without `--upgrade` for every operation in that workflow, including `--version`, daemon inspection, and cleanup. Report the resolved version. If the user explicitly requests a fixed version, skip latest resolution and use that version throughout.
 2. Use `--json` for every non-help operation that supports it. Parse stdout as JSON; keep stderr for diagnostics.
 3. Check `resource status` before OCR. Treat `download-ocr` as an explicit network and disk mutation.
 4. Discover devices before connecting. Resolve an exact ADB address, Win32 title/handle, PlayCover application, or wlroots target instead of guessing.

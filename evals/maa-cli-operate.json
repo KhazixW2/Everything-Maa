@@ -5,7 +5,7 @@
       "id": 1,
       "eval_name": "validate-without-device-action",
       "prompt": "用 maafw-cli 检查 ./assets/resource/base/pipeline 是否能加载，不要运行任务。",
-      "expected_output": "使用锁定版本和 --json 执行 pipeline validate，只解析验证结果与节点列表；不连接设备、不下载 OCR、不调用 pipeline run。",
+      "expected_output": "通过 latest 解析 maafw-cli，报告实际使用的版本，并使用 --json 执行 pipeline validate，只解析验证结果与节点列表；不连接设备、不下载 OCR、不调用 pipeline run。",
       "files": []
     },
     {

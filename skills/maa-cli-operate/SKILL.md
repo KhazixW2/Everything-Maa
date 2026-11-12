@@ -5,7 +5,7 @@ description: Operate MaaFramework devices and Pipeline resources through the maa
 
 # Maa CLI Operate
 
-Use the pinned external `maafw-cli` runtime. Read [references/command-contract.md](references/command-contract.md) before composing commands or interpreting output.
+Use the external `maafw-cli` runtime at latest by default. Read [references/command-contract.md](references/command-contract.md) before composing commands or interpreting output.
 
 ## Choose the runtime
 
@@ -15,7 +15,7 @@ Use MaaMCP instead when the task benefits from a long-lived exploratory session,
 
 ## Prepare safely
 
-1. Run the pinned version check and require the tested version.
+1. Resolve the latest runtime with `uvx --upgrade`, then run `--version` and report the version actually used. If the user explicitly requests a fixed version, replace the package spec with `maafw-cli==VERSION` and omit `--upgrade`.
 2. Use `--json` for every non-help operation that supports it. Parse stdout as JSON; keep stderr for diagnostics.
 3. Check `resource status` before OCR. Treat `download-ocr` as an explicit network and disk mutation.
 4. Discover devices before connecting. Resolve an exact ADB address, Win32 title/handle, PlayCover application, or wlroots target instead of guessing.
@@ -47,4 +47,4 @@ Use MaaMCP instead when the task benefits from a long-lived exploratory session,
 
 ## Report results
 
-Report the pinned CLI version, selected session/controller, command category, JSON result, screenshot path when present, and verification outcome. Separate tool failures from recognition misses and Pipeline task failures. Preserve stderr and any output paths needed for diagnosis.
+Report the resolved CLI version, selected session/controller, command category, JSON result, screenshot path when present, and verification outcome. Separate tool failures from recognition misses and Pipeline task failures. Preserve stderr and any output paths needed for diagnosis.

@@ -72,8 +72,9 @@ test("Claude project install is idempotent, preserves unrelated MCP, and uninsta
   const installedMcp = JSON.parse(fs.readFileSync(mcpPath, "utf8"));
   assert.equal(installedMcp.mcpServers.existing.command, "existing-server");
   assert.deepEqual(installedMcp.mcpServers["maa-mcp"].args, [
+    "--upgrade",
     "--from",
-    "maa-mcp==1.2.3",
+    "maa-mcp",
     "maa-mcp",
   ]);
   assert.deepEqual(installedMcp.mcpServers["create-maa-project"].args, [
@@ -106,7 +107,7 @@ test("Codex project install uses a managed TOML block and preserves other config
   assert.match(installed, /\[mcp_servers\.maa-mcp\]/);
   assert.match(installed, /\[mcp_servers\.create-maa-project\]/);
   assert.doesNotMatch(installed, /CREATE_MAA_PROJECT_AUTO_UPDATE/);
-  assert.match(installed, /@playwright\/mcp@0\.0\.78/);
+  assert.match(installed, /@playwright\/mcp@latest/);
 
   run(["uninstall", "--target", "codex"], root);
   assert.equal(fs.readFileSync(configPath, "utf8"), 'model = "gpt-5"\n');

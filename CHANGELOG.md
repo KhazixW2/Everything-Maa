@@ -6,6 +6,7 @@ All notable changes to Everything Maa will be documented in this file. The proje
 
 ### Changed
 
+- External runtime references now resolve latest by default when no version is specified. MaaMCP and maafw-cli use `uvx --upgrade`, while Playwright MCP and MaaEvidenceKit use npm's `@latest`; explicit fixed versions remain supported where the upstream package manager accepts them.
 - `maa-wiki` now loads MaaLLMWiki's authoritative `maallmwiki` Skill before catalog navigation and uses disclosed raw, jsDelivr, and README fallbacks while preserving pinned-source citation requirements.
 
 ## [0.2.0] - 2026-10-06

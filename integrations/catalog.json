@@ -35,14 +35,16 @@
         "strict-json"
       ],
       "package": "maafw-cli",
-      "version": "0.1.6",
+      "version": "latest",
+      "versionPolicy": "latest",
       "license": "MIT",
       "upstream": "https://github.com/otowa-kotori/maafw-cli",
       "cli": {
         "command": "uvx",
         "args": [
+          "--upgrade",
           "--from",
-          "maafw-cli==0.1.6",
+          "maafw-cli",
           "maafw-cli"
         ],
         "jsonFlag": "--json"

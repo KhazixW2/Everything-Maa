@@ -3,8 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const PACKAGE_SPEC = "maafw-cli==0.1.6";
-const BASE_ARGS = ["--from", PACKAGE_SPEC, "maafw-cli"];
+const BASE_ARGS = ["--upgrade", "--from", "maafw-cli", "maafw-cli"];
 
 function run(args, cwd) {
   const result = spawnSync("uvx", [...BASE_ARGS, ...args], {
@@ -45,7 +44,7 @@ const daemonWasRunning = daemonBefore.status === "running";
 
 try {
   const version = run(["--version"], commandCwd).trim();
-  if (!version.endsWith("0.1.6")) throw new Error(`Unexpected version: ${version}`);
+  if (!version) throw new Error("maafw-cli --version returned no version");
 
   const resource = runJson(["resource", "status"], commandCwd);
   if (typeof resource.ocr_model !== "boolean" || typeof resource.ocr_path !== "string") {

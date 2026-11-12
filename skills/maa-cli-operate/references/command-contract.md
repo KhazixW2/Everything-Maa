@@ -1,13 +1,13 @@
-# maafw-cli 0.1.6 command contract
+# maafw-cli command contract
 
-Use the verified external release:
+Resolve the latest external release by default:
 
 ```bash
-uvx --from maafw-cli==0.1.6 maafw-cli --version
-uvx --from maafw-cli==0.1.6 maafw-cli --json COMMAND
+uvx --upgrade --from maafw-cli maafw-cli --version
+uvx --upgrade --from maafw-cli maafw-cli --json COMMAND
 ```
 
-The package requires Python 3.10 or later and is currently alpha software. Keep the version pin because command and JSON contracts may change.
+The package requires Python 3.10 or later and is currently alpha software. If the user explicitly requests a fixed version, use `uvx --from maafw-cli==VERSION maafw-cli`; when no version is specified, keep the latest resolution above. The command and JSON contracts may change, so verify `--help` if observed output no longer matches this reference.
 
 ## Runtime selection
 
@@ -33,7 +33,7 @@ when the named session connected.
 
 Use `raw` only when explicitly required for evidence or diagnosis. Raw-size
 screenshots no longer match the 720p ROI/template baseline and can make copied
-coordinates resolve incorrectly on other devices. In version 0.1.6, PlayCover
+coordinates resolve incorrectly on other devices. In the documented upstream contract, PlayCover
 and wlroots do not expose `--size`; their controllers use the runtime defaults.
 
 ### MaaFramework scaling behavior
@@ -69,11 +69,11 @@ reused against it.
 ## Recognition and actions
 
 ```bash
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json ocr
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json reco OCR expected=Settings
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json reco TemplateMatch template=button.png threshold=0.8
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json click e3
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json screenshot
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json ocr
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json reco OCR expected=Settings
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json reco TemplateMatch template=button.png threshold=0.8
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json click e3
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json screenshot
 ```
 
 Supported recognition types are `TemplateMatch`, `FeatureMatch`, `ColorMatch`, and `OCR`. Use `reco --raw JSON` when the recognition config cannot be represented safely as `key=value` arguments.
@@ -83,11 +83,11 @@ Supported recognition types are `TemplateMatch`, `FeatureMatch`, `ColorMatch`, a
 The `./assets/resource/base/...` paths below are examples from a boilerplate-family packaged layout. In a Project Interface V2 project, derive resource paths from the main Interface's `resource[].path`, which resolves relative to that Interface.
 
 ```bash
-uvx --from maafw-cli==0.1.6 maafw-cli --json pipeline validate ./assets/resource/base/pipeline
-uvx --from maafw-cli==0.1.6 maafw-cli --json pipeline load ./assets/resource/base/pipeline
-uvx --from maafw-cli==0.1.6 maafw-cli --json pipeline show Start
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json pipeline run ./assets/resource/base/pipeline Start
-uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json pipeline run ./pipeline.json Start --override '{"Start":{"timeout":5000}}'
+uvx --upgrade --from maafw-cli maafw-cli --json pipeline validate ./assets/resource/base/pipeline
+uvx --upgrade --from maafw-cli maafw-cli --json pipeline load ./assets/resource/base/pipeline
+uvx --upgrade --from maafw-cli maafw-cli --json pipeline show Start
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json pipeline run ./assets/resource/base/pipeline Start
+uvx --upgrade --from maafw-cli maafw-cli --on phone --json pipeline run ./pipeline.json Start --override '{"Start":{"timeout":5000}}'
 ```
 
 `pipeline validate` and `pipeline load` do not execute a task. `pipeline run` uses the selected controller and may perform every action reachable from the entry node.
@@ -95,11 +95,11 @@ uvx --from maafw-cli==0.1.6 maafw-cli --on phone --json pipeline run ./pipeline.
 ## Resources and custom code
 
 ```bash
-uvx --from maafw-cli==0.1.6 maafw-cli --json resource status
-uvx --from maafw-cli==0.1.6 maafw-cli --json resource download-ocr
-uvx --from maafw-cli==0.1.6 maafw-cli --json resource load-image ./assets/resource/base/image
-uvx --from maafw-cli==0.1.6 maafw-cli --json custom list
-uvx --from maafw-cli==0.1.6 maafw-cli --json custom load ./agent/main.py
+uvx --upgrade --from maafw-cli maafw-cli --json resource status
+uvx --upgrade --from maafw-cli maafw-cli --json resource download-ocr
+uvx --upgrade --from maafw-cli maafw-cli --json resource load-image ./assets/resource/base/image
+uvx --upgrade --from maafw-cli maafw-cli --json custom list
+uvx --upgrade --from maafw-cli maafw-cli --json custom load ./agent/main.py
 ```
 
 Resource download changes the user cache. `custom load` imports and executes Python code; inspect the file and dependencies first.

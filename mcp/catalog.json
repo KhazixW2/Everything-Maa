@@ -21,7 +21,7 @@
       "package": "maa-mcp",
       "version": "latest",
       "license": "AGPL-3.0-or-later",
-      "upstream": "https://github.com/MAA-AI/MaaMCP",
+      "upstream": "https://github.com/MaaXYZ/MaaMCP",
       "command": "uvx",
       "args": [
         "--upgrade",

@@ -19,13 +19,14 @@
     "maa-mcp": {
       "description": "Inspect, validate, and run MaaFramework resources.",
       "package": "maa-mcp",
-      "version": "1.2.3",
+      "version": "latest",
       "license": "AGPL-3.0-or-later",
-      "upstream": "https://github.com/MAA-AI/MaaMCP",
+      "upstream": "https://github.com/MaaXYZ/MaaMCP",
       "command": "uvx",
       "args": [
+        "--upgrade",
         "--from",
-        "maa-mcp==1.2.3",
+        "maa-mcp",
         "maa-mcp"
       ]
     },
@@ -47,13 +48,13 @@
     "playwright": {
       "description": "Provide isolated browser automation for UI observation and debugging.",
       "package": "@playwright/mcp",
-      "version": "0.0.78",
+      "version": "latest",
       "license": "Apache-2.0",
       "upstream": "https://github.com/microsoft/playwright-mcp",
       "command": "npx",
       "args": [
         "--yes",
-        "@playwright/mcp@0.0.78",
+        "@playwright/mcp@latest",
         "--isolated"
       ]
     }

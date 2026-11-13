@@ -3,11 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const PACKAGE_SPEC = "maafw-cli==0.1.6";
-const BASE_ARGS = ["--from", PACKAGE_SPEC, "maafw-cli"];
-
-function run(args, cwd) {
-  const result = spawnSync("uvx", [...BASE_ARGS, ...args], {
+function runUv(args, cwd) {
+  const result = spawnSync("uvx", args, {
     cwd,
     encoding: "utf8",
   });
@@ -16,6 +13,20 @@ function run(args, cwd) {
     throw new Error(`Command failed (${result.status}): ${result.stderr || result.stdout}`);
   }
   return result.stdout;
+}
+
+const commandCwd = process.cwd();
+const resolvedVersion = runUv([
+  "--upgrade", "--from", "maafw-cli", "python", "-c",
+  'from importlib.metadata import version; print(version("maafw-cli"))',
+], commandCwd).trim();
+if (!/^[0-9][a-zA-Z0-9.!+_-]*$/.test(resolvedVersion)) {
+  throw new Error(`Invalid maafw-cli package version: ${resolvedVersion}`);
+}
+const BASE_ARGS = ["--from", `maafw-cli==${resolvedVersion}`, "maafw-cli"];
+
+function run(args, cwd) {
+  return runUv([...BASE_ARGS, ...args], cwd);
 }
 
 function runJson(args, cwd) {
@@ -39,14 +50,12 @@ function safeRemoveTemp(target) {
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "everything-maa-cli-smoke-"));
 const pipelinePath = path.join(root, "pipeline.json");
-const commandCwd = process.cwd();
+const version = run(["--version"], commandCwd).trim();
+if (!version) throw new Error("maafw-cli --version returned no version");
 const daemonBefore = runJson(["daemon", "status"], commandCwd);
 const daemonWasRunning = daemonBefore.status === "running";
 
 try {
-  const version = run(["--version"], commandCwd).trim();
-  if (!version.endsWith("0.1.6")) throw new Error(`Unexpected version: ${version}`);
-
   const resource = runJson(["resource", "status"], commandCwd);
   if (typeof resource.ocr_model !== "boolean" || typeof resource.ocr_path !== "string") {
     throw new Error(`Unexpected resource report: ${JSON.stringify(resource)}`);

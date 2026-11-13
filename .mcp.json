@@ -3,8 +3,9 @@
     "maa-mcp": {
       "command": "uvx",
       "args": [
+        "--upgrade",
         "--from",
-        "maa-mcp==1.2.3",
+        "maa-mcp",
         "maa-mcp"
       ]
     },
@@ -22,7 +23,7 @@
       "command": "npx",
       "args": [
         "--yes",
-        "@playwright/mcp@0.0.78",
+        "@playwright/mcp@latest",
         "--isolated"
       ]
     }

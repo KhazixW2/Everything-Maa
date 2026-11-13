@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const CLI = path.join(REPO_ROOT, "packages", "cli", "bin", "everything-maa.js");
@@ -32,6 +32,49 @@ function tempProject(t) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return root;
 }
+
+test("maafw-cli smoke resolves latest once and pins all operations including cleanup", (t) => {
+  const root = tempProject(t);
+  const preloadPath = path.join(root, "mock-uvx.mjs");
+  const callsPath = path.join(root, "calls.jsonl");
+  fs.writeFileSync(preloadPath, `
+    import childProcess from "node:child_process";
+    import fs from "node:fs";
+    import { syncBuiltinESMExports } from "node:module";
+    let daemonChecks = 0;
+    childProcess.spawnSync = (command, args) => {
+      fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify({ command, args }) + "\\n");
+      let output;
+      if (args[0] === "--upgrade") output = "1.2.3\\n";
+      else if (args.includes("--version")) output = "maafw-cli 1.2.3\\n";
+      else if (args.includes("daemon")) {
+        output = JSON.stringify({ status: args.includes("stop") || daemonChecks++ === 0 ? "stopped" : "running" });
+      } else if (args.includes("resource")) output = JSON.stringify({ ocr_model: true, ocr_path: "/models" });
+      else if (args.includes("pipeline")) output = JSON.stringify({ valid: true, nodes: ["Start"] });
+      else throw new Error("Unexpected invocation: " + JSON.stringify(args));
+      return { status: 0, stdout: output, stderr: "" };
+    };
+    syncBuiltinESMExports();
+  `);
+  const result = spawnSync(process.execPath, [
+    "--import", pathToFileURL(preloadPath).href,
+    path.join(REPO_ROOT, "scripts", "smoke-maafw-cli.mjs"),
+  ], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  const calls = fs.readFileSync(callsPath, "utf8").trim().split("\n").map(JSON.parse);
+  assert.deepEqual(calls[0], {
+    command: "uvx",
+    args: ["--upgrade", "--from", "maafw-cli", "python", "-c",
+      'from importlib.metadata import version; print(version("maafw-cli"))'],
+  });
+  for (const call of calls.slice(1)) {
+    assert.equal(call.command, "uvx");
+    assert.deepEqual(call.args.slice(0, 3), ["--from", "maafw-cli==1.2.3", "maafw-cli"]);
+    assert.ok(!call.args.includes("--upgrade"));
+  }
+  assert.deepEqual(calls.at(-1).args.slice(3), ["--json", "daemon", "stop"]);
+  assert.match(result.stdout, /smoke passed: maafw-cli 1\.2\.3/);
+});
 
 test("list reports all skills and MCP profiles", () => {
   const output = run(["list"], REPO_ROOT);
@@ -72,8 +115,9 @@ test("Claude project install is idempotent, preserves unrelated MCP, and uninsta
   const installedMcp = JSON.parse(fs.readFileSync(mcpPath, "utf8"));
   assert.equal(installedMcp.mcpServers.existing.command, "existing-server");
   assert.deepEqual(installedMcp.mcpServers["maa-mcp"].args, [
+    "--upgrade",
     "--from",
-    "maa-mcp==1.2.3",
+    "maa-mcp",
     "maa-mcp",
   ]);
   assert.deepEqual(installedMcp.mcpServers["create-maa-project"].args, [
@@ -106,7 +150,13 @@ test("Codex project install uses a managed TOML block and preserves other config
   assert.match(installed, /\[mcp_servers\.maa-mcp\]/);
   assert.match(installed, /\[mcp_servers\.create-maa-project\]/);
   assert.doesNotMatch(installed, /CREATE_MAA_PROJECT_AUTO_UPDATE/);
-  assert.match(installed, /@playwright\/mcp@0\.0\.78/);
+  const playwrightSection = installed.replaceAll("\r\n", "\n").split("[mcp_servers.playwright]\n")[1]
+    ?.split(/\n(?:\[|# END EVERYTHING-MAA MCP)/)[0];
+  assert.ok(playwrightSection, "Playwright MCP section is present");
+  assert.match(playwrightSection, /^command = "npx"$/m);
+  const args = playwrightSection.match(/^args = (\[.*\])$/m);
+  assert.ok(args, "Playwright MCP args are present");
+  assert.deepEqual(JSON.parse(args[1]), ["--yes", "@playwright/mcp@latest", "--isolated"]);
 
   run(["uninstall", "--target", "codex"], root);
   assert.equal(fs.readFileSync(configPath, "utf8"), 'model = "gpt-5"\n');

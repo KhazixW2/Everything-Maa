@@ -20,7 +20,7 @@ def test_cli_skill_routes_batch_and_persistent_workflows():
     assert "$maa-pipeline-testing" in text
 
 
-def test_cli_reference_documents_pinned_version_and_contract_terms():
+def test_cli_reference_documents_latest_runtime_and_contract_terms():
     # This checks documentation discoverability, not the external CLI contract.
     reference = (SKILL_DIR / "references" / "command-contract.md").read_text(
         encoding="utf-8"
@@ -30,8 +30,16 @@ def test_cli_reference_documents_pinned_version_and_contract_terms():
     )
     tool = integrations["tools"]["maafw-cli"]
 
-    assert tool["version"] == "0.1.6"
-    assert "maafw-cli==0.1.6" in reference
+    assert tool["version"] == "latest"
+    assert tool["versionPolicy"] == "latest"
+    assert tool["cli"]["args"] == [
+        "--upgrade",
+        "--from",
+        "maafw-cli",
+        "maafw-cli",
+    ]
+    assert "uvx --upgrade --from maafw-cli python" in reference
+    assert "0.1.6" not in reference
     assert "--json" in reference
     assert "--size short:720" in reference
     assert "short-side baseline" in reference

@@ -31,7 +31,7 @@ Trusted publishing requires a public GitHub-hosted workflow with OIDC. The relea
    - `.claude-plugin/plugin.json`;
    - `.claude-plugin/marketplace.json`;
    - `distribution/catalog.json`.
-3. Review third-party version policies and licenses in `mcp/catalog.json`, `integrations/catalog.json`, and `THIRD_PARTY_NOTICES.md`; create-maa-project and MaaEvidenceKit track latest.
+3. Review third-party version policies and licenses in `mcp/catalog.json`, `integrations/catalog.json`, and `THIRD_PARTY_NOTICES.md`; external runtimes use latest unless a fixed version is explicitly configured.
 4. Run:
 
 ```bash

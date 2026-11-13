@@ -1,6 +1,6 @@
 # Maa CLI Operate
 
-通过锁定版本的 maafw-cli，以严格 JSON 输出执行 MaaFramework 设备发现、命名会话、识别、动作与 Pipeline 操作。
+通过默认解析 latest 的 maafw-cli，以严格 JSON 输出执行 MaaFramework 设备发现、命名会话、识别、动作与 Pipeline 操作；用户明确指定版本时仍可固定该版本。
 
 ## 适用场景
 
